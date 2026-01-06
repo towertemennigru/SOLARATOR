@@ -1,0 +1,16 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOiA4ODg4ODgsICJ0eXBlIjogImN1c3RvZHkiLCAia2V5IjogIjB4...In0",
+    "payload": "eyJkb21haW4iOiAic29sYXJhdG9yLm9uZS52ZXJjZWwuYXBwIn0",
+    "signature": "MHC..."
+  },
+  "frame": {
+    "version": "0.2.1",
+    "name": "Solarator Incinerator",
+    "iconUrl": "https://solarator.one.vercel.app/icon.jpg",
+    "homeUrl": "https://solarator.one.vercel.app",
+    "splashImageUrl": "https://solarator.one.vercel.app/preview.jpg",
+    "splashBackgroundColor": "#1a1a1a",
+    "webhookUrl": "https://solarator.one.vercel.app/api/webhook"
+  }
+}
