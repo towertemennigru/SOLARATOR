@@ -4,7 +4,13 @@
     "payload": "eyJkb21haW4iOiJzb2xhcmF0b3Itb25lLnZlcmNlbC5hcHAifQ",
     "signature": "wdtFU+szGaUdZ6ht/JBfcGIE3wvA2+f5gj5c6PwztyIAyfoz3wwU0AoiBBuO03s4OVB4GwvUZ4TSZppmT198lRs="
   },
- "frame": {
+ {
+  "accountAssociation": {
+    "header": "eyJmaWQiOiA...",
+    "payload": "eyJkb21haW4iOi...",
+    "signature": "..."
+  },
+  "frame": {
     "version": "next",
     "name": "SOLARATOR",
     "iconUrl": "https://solarator-one.vercel.app/icon.jpg",
@@ -13,6 +19,13 @@
     "buttonTitle": "BURN AND EARN",
     "splashImageUrl": "https://solarator-one.vercel.app/preview.jpg",
     "splashBackgroundColor": "#0a0a0a",
-    "webhookUrl": "https://solarator-one.vercel.app/api/webhook"
+    "webhookUrl": "https://solarator-one.vercel.app/api/webhook",
+    "subtitle": "Sol Incinerator & Refund Tool",
+    "description": "Cüzdanındaki gereksiz token hesaplarını kapat, kirayı (SOL) geri al. Güvenli ve hızlı Sol Incinerator.",
+    "primaryCategory": "finance",
+    "heroImageUrl": "https://solarator-one.vercel.app/preview.jpg",
+    "screenshotUrls": [
+      "https://solarator-one.vercel.app/preview.jpg"
+    ]
   }
 }
