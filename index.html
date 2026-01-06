@@ -5,52 +5,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solarator - Sol Incinerator</title>
     
-    <!-- Sadece bunları ekle -->
+    <!-- Open Graph -->
     <meta property="og:title" content="Solarator" />
     <meta property="og:description" content="Boş token hesaplarını yak, SOL kazan" />
     <meta property="og:image" content="https://solarator-one.vercel.app/preview.jpg" />
     
+    <!-- Farcaster Frame -->
     <meta property="fc:frame" content="vNext" />
     <meta property="fc:frame:image" content="https://solarator-one.vercel.app/preview.jpg" />
-    <meta property="fc:frame:button:1" content="Solarator'u Aç" />
-    <meta property="fc:frame:button:1:action" content="link" />
-    <meta property="fc:frame:button:1:target" content="https://solarator-one.vercel.app" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0a0a0a; 
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 20px rgba(255, 80, 0, 0.5);
+        }
+        
+        .loader {
+            border: 3px solid #333;
+            border-top: 3px solid #ff4500;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+
+        /* Frame uyumluluğu için sabit boyutlar */
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
 <body class="min-h-screen flex flex-col selection:bg-orange-600 selection:text-white">
 
-    <header class="bg-gradient-to-r from-orange-900 via-red-900 to-black p-6 rounded-b-3xl shadow-2xl shadow-orange-900/20 relative overflow-hidden">
+    <header class="bg-gradient-to-r from-orange-900 via-red-900 to-black p-4 sm:p-6 rounded-b-3xl shadow-2xl shadow-orange-900/20 relative overflow-hidden">
         <div class="absolute top-0 right-0 p-4 opacity-20">
-            <i class="fa-solid fa-fire text-6xl text-orange-500"></i>
+            <i class="fa-solid fa-fire text-4xl sm:text-6xl text-orange-500"></i>
         </div>
         
         <div class="flex items-center justify-between relative z-10">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3">
                 <div class="bg-orange-600 p-2 rounded-lg shadow-lg shadow-orange-500/30">
-                    <i class="fa-solid fa-fire-flame-curved text-white text-xl"></i>
+                    <i class="fa-solid fa-fire-flame-curved text-white text-lg sm:text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black tracking-tighter glow-text">SOLarator</h1>
-                    <p class="text-xs text-orange-200/70">Incinerator & Refund Tool</p>
+                    <h1 class="text-xl sm:text-2xl font-black tracking-tighter glow-text">SOLarator</h1>
+                    <p class="text-[10px] sm:text-xs text-orange-200/70">Incinerator & Refund Tool</p>
                 </div>
             </div>
-            <div id="wallet-status" class="px-3 py-1 bg-black/40 rounded-full border border-white/10 text-xs text-gray-400">
-                <i class="fa-solid fa-wallet mr-1"></i> Bağlı Değil
+            <div id="wallet-status" class="px-2 sm:px-3 py-1 bg-black/40 rounded-full border border-white/10 text-[10px] sm:text-xs text-gray-400">
+                <i class="fa-solid fa-wallet mr-1"></i> <span class="hidden sm:inline">Bağlı Değil</span><span class="sm:hidden">-</span>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 p-6 flex flex-col gap-6 max-w-md mx-auto w-full">
+    <main class="flex-1 p-4 sm:p-6 flex flex-col gap-4 sm:gap-6 max-w-md mx-auto w-full">
         
-        <div class="glass-panel rounded-2xl p-6 text-center shadow-lg relative overflow-hidden group">
+        <div class="glass-panel rounded-2xl p-4 sm:p-6 text-center shadow-lg relative overflow-hidden group">
             <div class="absolute inset-0 bg-gradient-to-b from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
             
-            <h2 class="text-gray-400 text-sm font-semibold uppercase tracking-widest mb-1">Geri Kazanılacak</h2>
+            <h2 class="text-gray-400 text-xs sm:text-sm font-semibold uppercase tracking-widest mb-1">Geri Kazanılacak</h2>
             <div class="flex items-center justify-center gap-2">
-                <span id="refund-amount" class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">0.00</span>
-                <span class="text-xl font-bold text-orange-500">SOL</span>
+                <span id="refund-amount" class="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">0.00</span>
+                <span class="text-lg sm:text-xl font-bold text-orange-500">SOL</span>
             </div>
             
-            <div id="action-area" class="mt-6">
-                <button onclick="connectAndScan()" id="scan-btn" class="w-full py-4 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5">
+            <div id="action-area" class="mt-4 sm:mt-6">
+                <button onclick="connectAndScan()" id="scan-btn" class="w-full py-3 sm:py-4 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-white/5 text-sm sm:text-base">
                     <i class="fa-solid fa-magnifying-glass"></i> Cüzdanı Tara
                 </button>
             </div>
@@ -65,16 +116,39 @@
             </div>
             
             <div id="accounts-wrapper" class="max-h-64 overflow-y-auto space-y-2 pr-1">
-                </div>
+            </div>
         </div>
 
     </main>
 
-    <footer class="p-4 text-center text-[10px] text-gray-600 border-t border-white/5 bg-black/50 backdrop-blur">
+    <footer class="p-3 sm:p-4 text-center text-[9px] sm:text-[10px] text-gray-600 border-t border-white/5 bg-black/50 backdrop-blur">
         <p>Powered by Helius RPC & Solana Web3</p>
     </footer>
 
     <script>
+        // --- FARCASTER SDK INIT (Önce yükle) ---
+        let sdk = null;
+        let isInFrame = false;
+
+        async function initFarcasterSDK() {
+            try {
+                // SDK varsa yükle
+                if (window.sdk) {
+                    sdk = window.sdk;
+                    await sdk.actions.ready();
+                    isInFrame = true;
+                    console.log('✅ Farcaster SDK ready');
+                    
+                    // Context bilgisi al
+                    const context = await sdk.context;
+                    console.log('Frame Context:', context);
+                }
+            } catch (err) {
+                console.log('⚠️ Not in Farcaster frame or SDK unavailable');
+                isInFrame = false;
+            }
+        }
+
         // --- KONFİGÜRASYON ---
         const HELIUS_RPC = "https://mainnet.helius-rpc.com/?api-key=60ab6dbf-aa02-4ff8-9e12-b26abdcd40cc";
         const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -85,43 +159,41 @@
         let emptyAccounts = [];
 
         // Sayfa Yüklendiğinde
-        window.onload = async () => {
+        window.addEventListener('load', async () => {
             connection = new solanaWeb3.Connection(HELIUS_RPC);
             
-            // Farcaster SDK hazır olayı (Opsiyonel, webview içinde çalışıyorsa)
-            if (window.farcaster) {
-                try {
-                    await window.farcaster.actions.ready();
-                } catch(e) { console.log("SDK not ready yet"); }
-            }
-        };
+            // SDK'yı dene (varsa)
+            setTimeout(initFarcasterSDK, 500);
+        });
 
         // 1. Cüzdan Bağla ve Tara
         async function connectAndScan() {
             const btn = document.getElementById('scan-btn');
             const status = document.getElementById('status-msg');
 
-            // Solana Provider Kontrolü (Phantom, Solflare vb.)
             const provider = window.solana;
-            
-            if (!provider || !provider.isPhantom) {
-                // Not: Mini-app içinde deep-link gerekebilir, burada standart tarayıcı inject mantığı var.
-                // Eğer mobilde çalışmazsa kullanıcıyı browser'a yönlendirmek gerekebilir.
-            }
 
             try {
-                btn.innerHTML = '<div class="loader"></div> Taraniyor...';
+                btn.innerHTML = '<div class="loader"></div><span class="ml-2">Taranıyor...</span>';
                 status.innerText = "Cüzdan bağlantısı bekleniyor...";
 
-                // Cüzdan Bağlantısı
-                if (!provider) throw new Error("Solana cüzdanı bulunamadı!");
+                // Cüzdan yoksa uyarı
+                if (!provider) {
+                    status.innerText = "❌ Phantom cüzdan bulunamadı";
+                    resetButton();
+                    
+                    // Frame içindeyse deep link aç
+                    if (isInFrame && sdk) {
+                        await sdk.actions.openUrl('https://phantom.app/ul/browse/https://solarator-one.vercel.app?ref=solarator');
+                    }
+                    return;
+                }
+
                 const resp = await provider.connect();
                 userPublicKey = resp.publicKey;
 
-                // UI Güncelle
-                document.getElementById('wallet-status').innerHTML = `<i class="fa-solid fa-link text-green-500"></i> ${userPublicKey.toString().slice(0,4)}...${userPublicKey.toString().slice(-4)}`;
+                document.getElementById('wallet-status').innerHTML = `<i class="fa-solid fa-link text-green-500"></i> <span class="hidden sm:inline">${userPublicKey.toString().slice(0,4)}...${userPublicKey.toString().slice(-4)}</span><span class="sm:hidden">●</span>`;
                 
-                // Hesapları Tara
                 status.innerText = "Helius RPC üzerinden veri çekiliyor...";
                 await findEmptyAccounts(userPublicKey);
 
@@ -132,14 +204,13 @@
             }
         }
 
-        // 2. Boş Hesapları Bul (Solana Logic)
+        // 2. Boş Hesapları Bul
         async function findEmptyAccounts(ownerPubkey) {
             try {
                 const accounts = await connection.getParsedTokenAccountsByOwner(ownerPubkey, {
                     programId: TOKEN_PROGRAM_ID
                 });
 
-                // Bakiyesi 0 olanları filtrele
                 emptyAccounts = accounts.value.filter(acc => {
                     const amount = acc.account.data.parsed.info.tokenAmount.uiAmount;
                     return amount === 0;
@@ -166,13 +237,11 @@
             const badge = document.getElementById('count-badge');
             const status = document.getElementById('status-msg');
 
-            // Tahmini geri ödeme (Hesap başı ~0.002 SOL)
             const totalRefund = (emptyAccounts.length * 0.002039).toFixed(4);
             
             refundEl.innerText = totalRefund;
             badge.innerText = `${emptyAccounts.length} Adet`;
 
-            // Listeyi Temizle ve Doldur
             wrapper.innerHTML = "";
             
             if (emptyAccounts.length > 0) {
@@ -181,12 +250,12 @@
 
                 emptyAccounts.forEach(acc => {
                     const item = document.createElement('div');
-                    item.className = "flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-lg hover:bg-white/10 transition";
+                    item.className = "flex items-center justify-between p-2 sm:p-3 bg-white/5 border border-white/5 rounded-lg hover:bg-white/10 transition";
                     item.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <div class="bg-green-900/30 p-1.5 rounded text-green-500"><i class="fa-solid fa-recycle"></i></div>
+                        <div class="flex items-center gap-2 sm:gap-3">
+                            <div class="bg-green-900/30 p-1.5 rounded text-green-500"><i class="fa-solid fa-recycle text-xs"></i></div>
                             <div class="flex flex-col">
-                                <span class="text-[10px] text-gray-300 font-mono tracking-wide">${acc.pubkey.toString().slice(0, 15)}...</span>
+                                <span class="text-[10px] text-gray-300 font-mono tracking-wide">${acc.pubkey.toString().slice(0, 12)}...</span>
                                 <span class="text-[9px] text-gray-500">Mint: ${acc.mint.slice(0,6)}...</span>
                             </div>
                         </div>
@@ -195,9 +264,8 @@
                     wrapper.appendChild(item);
                 });
 
-                // Butonu "YAK" moduna geçir
                 actionArea.innerHTML = `
-                    <button onclick="burnAll()" class="w-full py-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-xl font-bold shadow-lg shadow-orange-900/50 flex items-center justify-center gap-2 animate-pulse">
+                    <button onclick="burnAll()" class="w-full py-3 sm:py-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-xl font-bold shadow-lg shadow-orange-900/50 flex items-center justify-center gap-2 animate-pulse text-sm sm:text-base">
                         <i class="fa-solid fa-fire"></i> HEPSİNİ YAK & SOL AL
                     </button>
                 `;
@@ -208,7 +276,7 @@
             }
         }
 
-        // 4. Yakma İşlemi (Close Account)
+        // 4. Yakma İşlemi
         async function burnAll() {
             const status = document.getElementById('status-msg');
             status.innerText = "İşlem oluşturuluyor...";
@@ -216,28 +284,23 @@
             try {
                 const transaction = new solanaWeb3.Transaction();
                 
-                // Blockhash al
                 const { blockhash } = await connection.getLatestBlockhash();
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = userPublicKey;
 
-                // En fazla 10-15 işlem sığar bir TX içine, demo için ilk 10'u alıyoruz.
-                // Gerçek app'te batching (gruplama) yapılmalı.
                 const batch = emptyAccounts.slice(0, 12);
 
                 batch.forEach(acc => {
-                    // Token Program CloseAccount Instruction (Data: [9])
-                    // Manuel instruction oluşturma (JS Layout gerekmeden raw data)
                     const keys = [
-                        { pubkey: acc.pubkey, isSigner: false, isWritable: true }, // Hesap
-                        { pubkey: userPublicKey, isSigner: false, isWritable: true }, // Destination (Para kime?)
-                        { pubkey: userPublicKey, isSigner: true, isWritable: false }  // Owner (İmza)
+                        { pubkey: acc.pubkey, isSigner: false, isWritable: true },
+                        { pubkey: userPublicKey, isSigner: false, isWritable: true },
+                        { pubkey: userPublicKey, isSigner: true, isWritable: false }
                     ];
                     
                     const instruction = new solanaWeb3.TransactionInstruction({
                         keys: keys,
                         programId: TOKEN_PROGRAM_ID,
-                        data:  Uint8Array.of(9) // 9 = CloseAccount
+                        data: Uint8Array.of(9)
                     });
                     
                     transaction.add(instruction);
@@ -245,22 +308,20 @@
 
                 status.innerText = "Cüzdandan onay bekleniyor...";
                 
-                // İmzala ve Gönder
                 const provider = window.solana;
                 const { signature } = await provider.signAndSendTransaction(transaction);
                 
-                status.innerHTML = `Başarılı! <a href="https://solscan.io/tx/${signature}" target="_blank" class="underline text-orange-400">TX Görüntüle</a>`;
+                status.innerHTML = `✅ Başarılı! <a href="https://solscan.io/tx/${signature}" target="_blank" class="underline text-orange-400">TX</a>`;
                 
-                // Listeyi temizle (görsel olarak)
                 emptyAccounts = []; 
                 setTimeout(() => {
                    updateUI();
-                   document.getElementById('action-area').innerHTML = `<div class="p-3 bg-green-900/20 text-green-500 rounded border border-green-500/20 text-center text-sm">İşlem Başarılı! SOL İadesi Yolda.</div>`;
+                   document.getElementById('action-area').innerHTML = `<div class="p-3 bg-green-900/20 text-green-500 rounded border border-green-500/20 text-center text-sm">✅ İşlem Başarılı! SOL İadesi Yolda.</div>`;
                 }, 1000);
 
             } catch (err) {
                 console.error(err);
-                status.innerText = "İşlem iptal edildi veya hata oluştu.";
+                status.innerText = "❌ İşlem iptal edildi";
             }
         }
 
