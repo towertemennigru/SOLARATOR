@@ -16,6 +16,10 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    
+    <!-- Farcaster SDK 0.2.1 (GÜNCELLENDİ) -->
+    <script src="https://unpkg.com/@farcaster/frame-sdk@0.2.1/dist/index.global.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -57,7 +61,6 @@
             100% { transform: rotate(360deg); } 
         }
 
-        /* Frame uyumluluğu için sabit boyutlar */
         html, body {
             width: 100%;
             height: 100%;
@@ -126,25 +129,39 @@
     </footer>
 
     <script>
-        // --- FARCASTER SDK INIT (Önce yükle) ---
+        // --- FARCASTER SDK 0.2.1 INIT ---
         let sdk = null;
         let isInFrame = false;
+        let farcasterUser = null;
 
         async function initFarcasterSDK() {
             try {
-                // SDK varsa yükle
-                if (window.sdk) {
-                    sdk = window.sdk;
+                // SDK global olarak yüklendi mi kontrol et
+                if (typeof window.FrameSDK !== 'undefined') {
+                    sdk = window.FrameSDK;
+                    
+                    // Ready metodunu çağır (splash screen hatası çözümü)
                     await sdk.actions.ready();
                     isInFrame = true;
-                    console.log('✅ Farcaster SDK ready');
                     
-                    // Context bilgisi al
+                    console.log('✅ Farcaster SDK 0.2.1 ready');
+                    
+                    // Context bilgisini al
                     const context = await sdk.context;
+                    farcasterUser = context.user;
                     console.log('Frame Context:', context);
+                    
+                    // Kullanıcı bilgisi varsa göster
+                    if (farcasterUser?.username) {
+                        document.getElementById('wallet-status').innerHTML = 
+                            `<i class="fa-brands fa-ethereum text-purple-400"></i> @${farcasterUser.username}`;
+                    }
+                } else {
+                    console.log('⚠️ SDK not loaded, retrying...');
+                    setTimeout(initFarcasterSDK, 200);
                 }
             } catch (err) {
-                console.log('⚠️ Not in Farcaster frame or SDK unavailable');
+                console.log('⚠️ Not in Farcaster frame:', err);
                 isInFrame = false;
             }
         }
@@ -162,8 +179,8 @@
         window.addEventListener('load', async () => {
             connection = new solanaWeb3.Connection(HELIUS_RPC);
             
-            // SDK'yı dene (varsa)
-            setTimeout(initFarcasterSDK, 500);
+            // SDK'yı başlat (biraz gecikmeyle, tam yüklensin diye)
+            setTimeout(initFarcasterSDK, 300);
         });
 
         // 1. Cüzdan Bağla ve Tara
@@ -171,20 +188,55 @@
             const btn = document.getElementById('scan-btn');
             const status = document.getElementById('status-msg');
 
-            const provider = window.solana;
-
             try {
                 btn.innerHTML = '<div class="loader"></div><span class="ml-2">Taranıyor...</span>';
                 status.innerText = "Cüzdan bağlantısı bekleniyor...";
 
-                // Cüzdan yoksa uyarı
+                // ÖNCELİK: Farcaster SDK ile Solana adres al
+                if (isInFrame && sdk) {
+                    try {
+                        status.innerText = "Farcaster'dan Solana adresi alınıyor...";
+                        
+                        // Farcaster'dan connected addresses al
+                        const context = await sdk.context;
+                        
+                        // Solana adresini bul (varsa)
+                        const solanaAddress = context.user?.verifications?.find(v => 
+                            v.protocol === 'solana' || v.address?.startsWith('solana:')
+                        );
+
+                        if (solanaAddress) {
+                            // Solana adresi varsa direkt kullan
+                            const cleanAddress = solanaAddress.address.replace('solana:', '');
+                            userPublicKey = new solanaWeb3.PublicKey(cleanAddress);
+                            
+                            document.getElementById('wallet-status').innerHTML = 
+                                `<i class="fa-solid fa-link text-green-500"></i> ${cleanAddress.slice(0,4)}...${cleanAddress.slice(-4)}`;
+                            
+                            status.innerText = "Helius RPC üzerinden veri çekiliyor...";
+                            await findEmptyAccounts(userPublicKey);
+                            return;
+                        } else {
+                            status.innerText = "Solana adresi bulunamadı, external wallet deneyin...";
+                        }
+                    } catch (err) {
+                        console.log('Farcaster wallet hatası:', err);
+                        status.innerText = "External wallet'a geçiliyor...";
+                    }
+                }
+
+                // FALLBACK: Phantom veya diğer wallet extension'lar
+                const provider = window.solana;
+
                 if (!provider) {
-                    status.innerText = "❌ Phantom cüzdan bulunamadı";
+                    status.innerText = "❌ Solana cüzdan bulunamadı";
                     resetButton();
                     
-                    // Frame içindeyse deep link aç
+                    // Frame içindeyse deep link
                     if (isInFrame && sdk) {
-                        await sdk.actions.openUrl('https://phantom.app/ul/browse/https://solarator-one.vercel.app?ref=solarator');
+                        await sdk.actions.openUrl('https://phantom.app/ul/browse/https://solarator-one.vercel.app');
+                    } else {
+                        window.open('https://phantom.app/download', '_blank');
                     }
                     return;
                 }
@@ -192,7 +244,8 @@
                 const resp = await provider.connect();
                 userPublicKey = resp.publicKey;
 
-                document.getElementById('wallet-status').innerHTML = `<i class="fa-solid fa-link text-green-500"></i> <span class="hidden sm:inline">${userPublicKey.toString().slice(0,4)}...${userPublicKey.toString().slice(-4)}</span><span class="sm:hidden">●</span>`;
+                document.getElementById('wallet-status').innerHTML = 
+                    `<i class="fa-solid fa-link text-green-500"></i> ${userPublicKey.toString().slice(0,4)}...${userPublicKey.toString().slice(-4)}`;
                 
                 status.innerText = "Helius RPC üzerinden veri çekiliyor...";
                 await findEmptyAccounts(userPublicKey);
