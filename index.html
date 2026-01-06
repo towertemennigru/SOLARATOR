@@ -5,51 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solarator - Sol Incinerator</title>
     
+    <!-- Open Graph (Genel Preview) -->
+    <meta property="og:title" content="Solarator Incinerator" />
+    <meta property="og:description" content="Boş token hesaplarını yakarak SOL geri kazanın" />
+    <meta property="og:image" content="https://solarator-one.vercel.app/preview.jpg" />
+    <meta property="og:url" content="https://solarator-one.vercel.app" />
+    <meta property="og:type" content="website" />
+    
+    <!-- Twitter Card (Opsiyonel ama önerilen) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Solarator Incinerator" />
+    <meta name="twitter:description" content="Boş token hesaplarını yakarak SOL geri kazanın" />
+    <meta name="twitter:image" content="https://solarator-one.vercel.app/preview.jpg" />
+    
+    <!-- Farcaster Frame Meta -->
     <meta property="fc:frame" content="vNext" />
     <meta property="fc:frame:image" content="https://solarator-one.vercel.app/preview.jpg" />
-    <meta property="og:image" content="https://solarator-one.vercel.app/preview.jpg" />
-    <meta property="og:title" content="Solarator Incinerator" />
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk/dist/index.min.js"></script>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; color: white; }
-        
-        /* Scrollbar düzenlemesi */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #1a1a1a; }
-        ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-        
-        .glass-panel {
-            background: rgba(20, 20, 20, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        .glow-text {
-            text-shadow: 0 0 20px rgba(255, 80, 0, 0.5);
-        }
-        
-        .loader {
-            border: 3px solid #333;
-            border-top: 3px solid #ff4500;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
-</head>
+    <meta property="fc:frame:button:1" content="Solarator'u Aç" />
+    <meta property="fc:frame:button:1:action" content="link" />
+    <meta property="fc:frame:button:1:target" content="https://solarator-one.vercel.app" />
 <body class="min-h-screen flex flex-col selection:bg-orange-600 selection:text-white">
 
     <header class="bg-gradient-to-r from-orange-900 via-red-900 to-black p-6 rounded-b-3xl shadow-2xl shadow-orange-900/20 relative overflow-hidden">
