@@ -24,8 +24,5 @@
     "description": "Cüzdanındaki gereksiz token hesaplarını kapat, kirayı (SOL) geri al. Güvenli ve hızlı Sol Incinerator.",
     "primaryCategory": "finance",
     "heroImageUrl": "https://solarator-one.vercel.app/preview.jpg",
-    "screenshotUrls": [
-      "https://solarator-one.vercel.app/preview.jpg"
-    ]
   }
 }
