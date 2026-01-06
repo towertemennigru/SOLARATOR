@@ -1,9 +1,9 @@
 {
   "accountAssociation": {
-    "header": "eyJmaWQiOjQ0Mjg1MywidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweEQ2ODQ2RWNhNzFmN2Y1N2RlZkVlODMwMTE0MmRjZmIwMDZFNzExNDAifQ",
+    "header": "eyJmaWQiOjQ0Mjg1MywidHlwZSI6ImF1dGgiLCJrZXkiOiIweDlFMTJDOTNCRDA0ODVDZWVhNTFiREMyMTJBOGQwYjliOTEwNzZiZDgifQ",
     "payload": "eyJkb21haW4iOiJzb2xhcmF0b3Itb25lLnZlcmNlbC5hcHAifQ",
-    "signature": "0xc9d9645cbc3e8f8d6d29dcdef18fbeaad6654dbf6573ddc412989fc8824c9f7e22a4c97a8ed0577c42a75bf28c350ebe0c109f6c93e9710d8e2386419acb047a1b"
-  },
+    "signature": "wdtFU+szGaUdZ6ht/JBfcGIE3wvA2+f5gj5c6PwztyIAyfoz3wwU0AoiBBuO03s4OVB4GwvUZ4TSZppmT198lRs="
+  };
   "frame": {
     "version": "next",
     "name": "Solarator Incinerator",
