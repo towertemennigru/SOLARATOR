@@ -4,13 +4,15 @@
     "payload": "eyJkb21haW4iOiJzb2xhcmF0b3Itb25lLnZlcmNlbC5hcHAifQ",
     "signature": "wdtFU+szGaUdZ6ht/JBfcGIE3wvA2+f5gj5c6PwztyIAyfoz3wwU0AoiBBuO03s4OVB4GwvUZ4TSZppmT198lRs="
   },
-  "frame": {
+ "frame": {
     "version": "next",
-    "name": "Solarator Incinerator",
+    "name": "SOLARATOR",
     "iconUrl": "https://solarator-one.vercel.app/icon.jpg",
     "homeUrl": "https://solarator-one.vercel.app",
+    "imageUrl": "https://solarator-one.vercel.app/preview.jpg",
+    "buttonTitle": "BURN AND EARN",
     "splashImageUrl": "https://solarator-one.vercel.app/preview.jpg",
-    "splashBackgroundColor": "#1a1a1a",
+    "splashBackgroundColor": "#0a0a0a",
     "webhookUrl": "https://solarator-one.vercel.app/api/webhook"
   }
 }
