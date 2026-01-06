@@ -14,8 +14,8 @@
     "splashImageUrl": "https://solarator-one.vercel.app/preview.jpg",
     "splashBackgroundColor": "#0a0a0a",
     "webhookUrl": "https://solarator-one.vercel.app/api/webhook",
-    "subtitle": "Sol Incinerator & Refund Tool",
-    "description": "Cüzdanındaki gereksiz token hesaplarını kapat, kirayı (SOL) geri al. Güvenli ve hızlı Sol Incinerator.",
+    "subtitle": "Sol Incinerator  Refund Tool",
+    "description": "Get your SOL rent back. Secure and fast Sol Incinerator.",
     "primaryCategory": "finance",
     "heroImageUrl": "https://solarator-one.vercel.app/preview.jpg",
     "screenshotUrls": [
