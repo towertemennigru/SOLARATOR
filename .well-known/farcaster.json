@@ -3,7 +3,7 @@
     "header": "eyJmaWQiOjQ0Mjg1MywidHlwZSI6ImF1dGgiLCJrZXkiOiIweDlFMTJDOTNCRDA0ODVDZWVhNTFiREMyMTJBOGQwYjliOTEwNzZiZDgifQ",
     "payload": "eyJkb21haW4iOiJzb2xhcmF0b3Itb25lLnZlcmNlbC5hcHAifQ",
     "signature": "wdtFU+szGaUdZ6ht/JBfcGIE3wvA2+f5gj5c6PwztyIAyfoz3wwU0AoiBBuO03s4OVB4GwvUZ4TSZppmT198lRs="
-  }
+  },
   "frame": {
     "version": "next",
     "name": "Solarator Incinerator",
