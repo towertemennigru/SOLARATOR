@@ -5,22 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solarator - Sol Incinerator</title>
     
-    <!-- Open Graph -->
     <meta property="og:title" content="Solarator" />
     <meta property="og:description" content="Boş token hesaplarını yak, SOL kazan" />
     <meta property="og:image" content="https://solarator-one.vercel.app/preview.jpg" />
-    
-    <!-- Farcaster Frame -->
     <meta property="fc:frame" content="vNext" />
     <meta property="fc:frame:image" content="https://solarator-one.vercel.app/preview.jpg" />
+    <meta property="fc:frame:button:1" content="Yak ve Kazan" />
+    <meta property="fc:frame:button:1:action" content="link" />
+    <meta property="fc:frame:button:1:target" content="https://solarator-one.vercel.app" />
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
     
-    <!-- Farcaster SDK 0.2.1 (GÜNCELLENDİ) -->
     <script src="https://unpkg.com/@farcaster/frame-sdk@0.2.1/dist/index.global.js"></script>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
@@ -50,8 +49,8 @@
             border: 3px solid #333;
             border-top: 3px solid #ff4500;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             animation: spin 1s linear infinite;
             display: inline-block;
         }
@@ -59,13 +58,6 @@
         @keyframes spin { 
             0% { transform: rotate(0deg); } 
             100% { transform: rotate(360deg); } 
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
         }
     </style>
 </head>
@@ -119,7 +111,7 @@
             </div>
             
             <div id="accounts-wrapper" class="max-h-64 overflow-y-auto space-y-2 pr-1">
-            </div>
+                </div>
         </div>
 
     </main>
@@ -129,61 +121,56 @@
     </footer>
 
     <script>
-        // --- FARCASTER SDK 0.2.1 INIT ---
+        // --- 1. FARCASTER SDK MANTIĞI (Ready Signal) ---
         let sdk = null;
         let isInFrame = false;
         let farcasterUser = null;
 
         async function initFarcasterSDK() {
             try {
-                // SDK global olarak yüklendi mi kontrol et
-                if (typeof window.FrameSDK !== 'undefined') {
-                    sdk = window.FrameSDK;
+                // CDN'den yüklenen SDK global değişkene atanır (FrameSDK veya farcaster)
+                if (window.FrameSDK || window.farcaster) {
+                    sdk = window.FrameSDK || window.farcaster;
                     
-                    // Ready metodunu çağır (splash screen hatası çözümü)
+                    // KRİTİK NOKTA: Uygulama hazır sinyali gönder!
                     await sdk.actions.ready();
                     isInFrame = true;
                     
-                    console.log('✅ Farcaster SDK 0.2.1 ready');
+                    console.log('✅ Farcaster SDK ready');
                     
-                    // Context bilgisini al
+                    // Context (Kullanıcı verisi) al
                     const context = await sdk.context;
                     farcasterUser = context.user;
-                    console.log('Frame Context:', context);
                     
-                    // Kullanıcı bilgisi varsa göster
                     if (farcasterUser?.username) {
                         document.getElementById('wallet-status').innerHTML = 
                             `<i class="fa-brands fa-ethereum text-purple-400"></i> @${farcasterUser.username}`;
                     }
                 } else {
-                    console.log('⚠️ SDK not loaded, retrying...');
-                    setTimeout(initFarcasterSDK, 200);
+                    console.log('⚠️ SDK yükleniyor...');
+                    setTimeout(initFarcasterSDK, 500); // Yüklenmediyse tekrar dene
                 }
             } catch (err) {
-                console.log('⚠️ Not in Farcaster frame:', err);
+                console.log('⚠️ Frame içinde değil:', err);
                 isInFrame = false;
             }
         }
 
-        // --- KONFİGÜRASYON ---
+        // --- 2. SOLANA AYARLARI ---
         const HELIUS_RPC = "https://mainnet.helius-rpc.com/?api-key=60ab6dbf-aa02-4ff8-9e12-b26abdcd40cc";
         const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
         
-        // --- STATE ---
         let connection;
         let userPublicKey = null;
         let emptyAccounts = [];
 
-        // Sayfa Yüklendiğinde
+        // Sayfa Yüklendiğinde Başlat
         window.addEventListener('load', async () => {
             connection = new solanaWeb3.Connection(HELIUS_RPC);
-            
-            // SDK'yı başlat (biraz gecikmeyle, tam yüklensin diye)
-            setTimeout(initFarcasterSDK, 300);
+            setTimeout(initFarcasterSDK, 300); // SDK başlat
         });
 
-        // 1. Cüzdan Bağla ve Tara
+        // --- 3. CÜZDAN TARA ---
         async function connectAndScan() {
             const btn = document.getElementById('scan-btn');
             const status = document.getElementById('status-msg');
@@ -192,53 +179,31 @@
                 btn.innerHTML = '<div class="loader"></div><span class="ml-2">Taranıyor...</span>';
                 status.innerText = "Cüzdan bağlantısı bekleniyor...";
 
-                // ÖNCELİK: Farcaster SDK ile Solana adres al
+                // A) Farcaster Context'inden Cüzdan Bulmaya Çalış
                 if (isInFrame && sdk) {
                     try {
-                        status.innerText = "Farcaster'dan Solana adresi alınıyor...";
-                        
-                        // Farcaster'dan connected addresses al
-                        const context = await sdk.context;
-                        
-                        // Solana adresini bul (varsa)
-                        const solanaAddress = context.user?.verifications?.find(v => 
-                            v.protocol === 'solana' || v.address?.startsWith('solana:')
-                        );
-
-                        if (solanaAddress) {
-                            // Solana adresi varsa direkt kullan
-                            const cleanAddress = solanaAddress.address.replace('solana:', '');
-                            userPublicKey = new solanaWeb3.PublicKey(cleanAddress);
-                            
-                            document.getElementById('wallet-status').innerHTML = 
-                                `<i class="fa-solid fa-link text-green-500"></i> ${cleanAddress.slice(0,4)}...${cleanAddress.slice(-4)}`;
-                            
-                            status.innerText = "Helius RPC üzerinden veri çekiliyor...";
-                            await findEmptyAccounts(userPublicKey);
-                            return;
-                        } else {
-                            status.innerText = "Solana adresi bulunamadı, external wallet deneyin...";
-                        }
-                    } catch (err) {
-                        console.log('Farcaster wallet hatası:', err);
-                        status.innerText = "External wallet'a geçiliyor...";
-                    }
+                         const context = await sdk.context;
+                         // Solana adresini context içinde ara
+                         const solanaData = context.user?.verifications?.find(v => v.protocol === 'solana');
+                         // Veya adreste solana: öneki var mı bak
+                         
+                         // NOT: Basitlik için burada external wallet'a yönlendiriyoruz,
+                         // çünkü Farcaster v2'de cüzdan bağlama akışı farklıdır.
+                         // Eğer Phantom varsa onu tetikle:
+                    } catch(e) { console.log(e); }
                 }
 
-                // FALLBACK: Phantom veya diğer wallet extension'lar
+                // B) Standart Tarayıcı Cüzdanı (Phantom vb.)
                 const provider = window.solana;
-
+                
                 if (!provider) {
-                    status.innerText = "❌ Solana cüzdan bulunamadı";
-                    resetButton();
-                    
-                    // Frame içindeyse deep link
+                    // Cüzdan yoksa ve mobildeysek Phantom linki aç
                     if (isInFrame && sdk) {
-                        await sdk.actions.openUrl('https://phantom.app/ul/browse/https://solarator-one.vercel.app');
-                    } else {
-                        window.open('https://phantom.app/download', '_blank');
+                        sdk.actions.openUrl('https://phantom.app/ul/browse/https://solarator-one.vercel.app');
+                        status.innerText = "Phantom açılıyor...";
+                        return;
                     }
-                    return;
+                    throw new Error("Solana cüzdanı bulunamadı (Phantom yükleyin)");
                 }
 
                 const resp = await provider.connect();
@@ -247,7 +212,7 @@
                 document.getElementById('wallet-status').innerHTML = 
                     `<i class="fa-solid fa-link text-green-500"></i> ${userPublicKey.toString().slice(0,4)}...${userPublicKey.toString().slice(-4)}`;
                 
-                status.innerText = "Helius RPC üzerinden veri çekiliyor...";
+                status.innerText = "Veri çekiliyor...";
                 await findEmptyAccounts(userPublicKey);
 
             } catch (err) {
@@ -257,7 +222,7 @@
             }
         }
 
-        // 2. Boş Hesapları Bul
+        // --- 4. HESAPLARI BUL ---
         async function findEmptyAccounts(ownerPubkey) {
             try {
                 const accounts = await connection.getParsedTokenAccountsByOwner(ownerPubkey, {
@@ -273,42 +238,39 @@
                 }));
 
                 updateUI();
-
             } catch (err) {
                 console.error(err);
-                document.getElementById('status-msg').innerText = "RPC Hatası oluştu.";
+                document.getElementById('status-msg').innerText = "RPC Bağlantı Hatası";
                 resetButton();
             }
         }
 
-        // 3. Arayüzü Güncelle
+        // --- 5. ARAYÜZ GÜNCELLE ---
         function updateUI() {
             const refundEl = document.getElementById('refund-amount');
-            const listContainer = document.getElementById('account-list-container');
             const wrapper = document.getElementById('accounts-wrapper');
             const actionArea = document.getElementById('action-area');
+            const listContainer = document.getElementById('account-list-container');
             const badge = document.getElementById('count-badge');
             const status = document.getElementById('status-msg');
 
             const totalRefund = (emptyAccounts.length * 0.002039).toFixed(4);
-            
             refundEl.innerText = totalRefund;
             badge.innerText = `${emptyAccounts.length} Adet`;
-
             wrapper.innerHTML = "";
-            
+
             if (emptyAccounts.length > 0) {
                 listContainer.classList.remove('hidden');
                 listContainer.classList.add('flex');
 
-                emptyAccounts.forEach(acc => {
+                emptyAccounts.slice(0, 50).forEach(acc => {
                     const item = document.createElement('div');
-                    item.className = "flex items-center justify-between p-2 sm:p-3 bg-white/5 border border-white/5 rounded-lg hover:bg-white/10 transition";
+                    item.className = "flex items-center justify-between p-2 sm:p-3 bg-white/5 border border-white/5 rounded-lg";
                     item.innerHTML = `
-                        <div class="flex items-center gap-2 sm:gap-3">
+                        <div class="flex items-center gap-2">
                             <div class="bg-green-900/30 p-1.5 rounded text-green-500"><i class="fa-solid fa-recycle text-xs"></i></div>
                             <div class="flex flex-col">
-                                <span class="text-[10px] text-gray-300 font-mono tracking-wide">${acc.pubkey.toString().slice(0, 12)}...</span>
+                                <span class="text-[10px] text-gray-300 font-mono">${acc.pubkey.toString().slice(0, 12)}...</span>
                                 <span class="text-[9px] text-gray-500">Mint: ${acc.mint.slice(0,6)}...</span>
                             </div>
                         </div>
@@ -318,63 +280,57 @@
                 });
 
                 actionArea.innerHTML = `
-                    <button onclick="burnAll()" class="w-full py-3 sm:py-4 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white rounded-xl font-bold shadow-lg shadow-orange-900/50 flex items-center justify-center gap-2 animate-pulse text-sm sm:text-base">
+                    <button onclick="burnAll()" class="w-full py-3 sm:py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-bold animate-pulse text-sm sm:text-base">
                         <i class="fa-solid fa-fire"></i> HEPSİNİ YAK & SOL AL
                     </button>
                 `;
-                status.innerText = "Yakılmaya hazır!";
+                status.innerText = "İşleme hazır!";
             } else {
-                status.innerText = "Temiz! Yakılacak hesap bulunamadı.";
+                status.innerText = "Temiz! Yakılacak hesap yok.";
                 resetButton();
             }
         }
 
-        // 4. Yakma İşlemi
+        // --- 6. YAKMA İŞLEMİ ---
         async function burnAll() {
             const status = document.getElementById('status-msg');
-            status.innerText = "İşlem oluşturuluyor...";
+            status.innerText = "İmza bekleniyor...";
 
             try {
                 const transaction = new solanaWeb3.Transaction();
-                
                 const { blockhash } = await connection.getLatestBlockhash();
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = userPublicKey;
 
+                // Max 15 işlem sığar, demo için ilk 12'yi al
                 const batch = emptyAccounts.slice(0, 12);
-
                 batch.forEach(acc => {
-                    const keys = [
-                        { pubkey: acc.pubkey, isSigner: false, isWritable: true },
-                        { pubkey: userPublicKey, isSigner: false, isWritable: true },
-                        { pubkey: userPublicKey, isSigner: true, isWritable: false }
-                    ];
-                    
-                    const instruction = new solanaWeb3.TransactionInstruction({
-                        keys: keys,
+                    transaction.add(new solanaWeb3.TransactionInstruction({
+                        keys: [
+                            { pubkey: acc.pubkey, isSigner: false, isWritable: true },
+                            { pubkey: userPublicKey, isSigner: false, isWritable: true },
+                            { pubkey: userPublicKey, isSigner: true, isWritable: false }
+                        ],
                         programId: TOKEN_PROGRAM_ID,
-                        data: Uint8Array.of(9)
-                    });
-                    
-                    transaction.add(instruction);
+                        data: Uint8Array.of(9) // CloseAccount
+                    }));
                 });
 
-                status.innerText = "Cüzdandan onay bekleniyor...";
-                
                 const provider = window.solana;
                 const { signature } = await provider.signAndSendTransaction(transaction);
                 
                 status.innerHTML = `✅ Başarılı! <a href="https://solscan.io/tx/${signature}" target="_blank" class="underline text-orange-400">TX</a>`;
                 
+                // Temizle
                 emptyAccounts = []; 
                 setTimeout(() => {
-                   updateUI();
-                   document.getElementById('action-area').innerHTML = `<div class="p-3 bg-green-900/20 text-green-500 rounded border border-green-500/20 text-center text-sm">✅ İşlem Başarılı! SOL İadesi Yolda.</div>`;
+                    updateUI();
+                    document.getElementById('action-area').innerHTML = `<div class="p-3 bg-green-900/20 text-green-500 rounded border border-green-500/20 text-center text-sm">✅ Başarılı!</div>`;
                 }, 1000);
 
             } catch (err) {
                 console.error(err);
-                status.innerText = "❌ İşlem iptal edildi";
+                status.innerText = "❌ İşlem iptal edildi.";
             }
         }
 
