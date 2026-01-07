@@ -1,425 +1,790 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Farcaster Solana Frame v2 (Vanilla)</title>
+    <title>Solarator - Advanced Sol Incinerator</title>
     
-    <meta property="fc:frame" content="vNext" />
-    <meta property="fc:frame:image" content="https://placehold.co/600x400/9945FF/ffffff?text=Solana+Frame+v2" />
-    <meta property="fc:frame:button:1" content="Cüzdanı Bağla" />
-    <meta property="fc:frame:post_url" content="https://my-frame-server.com/api/frame" />
-    
+    <meta property="fc:frame" content='{"version": "next", "imageUrl": "https://placehold.co/600x400/1a1a1a/ff4500?text=Solarator+V2", "button": {"title": "Launch Solarator", "action": {"type": "launch_frame", "name": "Solarator", "url": "https://solarator.vercel.app", "splashImageUrl": "https://placehold.co/200x200/1a1a1a/ff4500?text=Loading...", "splashBackgroundColor": "#0a0a0a"}}}' />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        /* Farcaster Dark Mode Estetiğine Uygun Renk Paleti */
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
         :root {
-            --bg-color: #0f172a; /* Koyu Lacivert Arka Plan */
-            --text-color: #f8fafc; /* Kırık Beyaz Metin */
-            --primary-color: #9945FF; /* Solana Moru */
-            --secondary-color: #14F195; /* Solana Yeşili */
-            --error-color: #ef4444; /* Hata Kırmızısı */
-            --surface-color: rgba(255, 255, 255, 0.05); /* Yarı Saydam Kart Rengi */
+            --primary: #ff4500;
+            --primary-dark: #cc3700;
+            --bg-dark: #050505;
+            --panel-bg: rgba(20, 20, 20, 0.95);
+            --border-color: rgba(255, 255, 255, 0.08);
         }
 
-        /* Mobil Öncelikli Reset ve Temel Stiller */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 16px; /* Mobilde kenar boşluğu */
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* Glassmorphism Utilities */
+       .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Animation Classes */
+       .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+       .slide-up { animation: slideUp 0.4s ease-out forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Custom Loader */
+       .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 69, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            text-align: center;
-            -webkit-font-smoothing: antialiased; /* Font yumuşatma */
+            gap: 10px;
+            width: 90%;
+            max-width: 400px;
+            pointer-events: none;
         }
-
-        /* Kart Yapısı: İçerik Kapsayıcısı */
-       .container {
-            width: 100%;
-            max-width: 420px; /* Warpcast mobil görünüm genişliği */
-            background: var(--surface-color);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); /* Derinlik hissi */
-            backdrop-filter: blur(8px); /* Buzlu cam efekti */
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent; /* Gradient Başlık */
-        }
-        
-        p {
-            color: #94a3b8;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 1.5rem;
-        }
-
-        /* İnteraktif Bileşenler: Butonlar */
-       .btn {
-            background: var(--primary-color);
-            color: white;
-            font-weight: 600;
-            border: none;
-            padding: 14px 24px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 1rem;
-            width: 100%;
-            margin-top: 12px;
-            transition: transform 0.1s ease, background 0.2s;
+       .toast {
+            background: rgba(30, 30, 30, 0.95);
+            border-left: 4px solid var(--primary);
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
+            gap: 12px;
+            pointer-events: auto;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+       .toast.show { transform: translateY(0); opacity: 1; }
+       .toast.success { border-color: #10b981; }
+       .toast.error { border-color: #ef4444; }
+
+        /* Wallet Modal */
+       .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 50;
+            display: flex;
             justify-content: center;
-            gap: 8px;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
         }
-
-       .btn:active { transform: scale(0.97); } /* Tıklama efekti */
-       .btn:hover { filter: brightness(1.1); }
-       .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
-
-       .btn-secondary {
-            background: transparent;
-            border: 1px solid var(--secondary-color);
-            color: var(--secondary-color);
+       .modal-overlay.active { opacity: 1; pointer-events: all; }
+       .modal-content {
+            width: 90%;
+            max-width: 380px;
+            transform: scale(0.95);
+            transition: transform 0.2s;
         }
+       .modal-overlay.active.modal-content { transform: scale(1); }
 
-       .btn-danger {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--error-color);
-            color: var(--error-color);
+        /* Checkbox Custom */
+       .custom-checkbox {
+            appearance: none;
+            background-color: rgba(255,255,255,0.05);
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 1.25em;
+            height: 1.25em;
+            border: 1px solid currentColor;
+            border-radius: 0.25em;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
         }
-
-        /* Yardımcı Sınıflar */
-       .hidden { display: none!important; }
-       .break-all { word-break: break-all; }
-        
-        #status {
-            margin-top: 20px;
-            font-size: 0.85rem;
-            padding: 10px;
-            border-radius: 8px;
-            background: rgba(0,0,0,0.2);
-            min-height: 20px;
-            opacity: 0; /* Başlangıçta görünmez */
-            transition: opacity 0.3s;
+       .custom-checkbox::before {
+            content: "";
+            width: 0.65em;
+            height: 0.65em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em var(--primary);
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
         }
-        #status.visible { opacity: 1; }
-
-        /* Cüzdan Adresi Gösterimi */
-        code {
-            font-family: 'Fira Code', monospace;
-            background: rgba(0,0,0,0.3);
-            padding: 4px 8px;
-            border-radius: 4px;
-            color: var(--secondary-color);
-            font-size: 0.9em;
-        }
+       .custom-checkbox:checked::before { transform: scale(1); }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>Solana Bağlantı Portalı</h1>
-        
-        <div id="loading-state">
-            <p>Sistem Başlatılıyor...</p>
-        </div>
+<body class="min-h-screen flex flex-col">
 
-        <div id="connect-view" class="hidden">
-            <p>Farcaster kimliğiniz ile Solana ekosistemine güvenli giriş yapın.</p>
-            <button id="connect-btn" class="btn">
-                <span>Cüzdanı Bağla (Phantom/Solflare)</span>
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-orange-600/10 blur-[100px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-900/10 blur-[100px]"></div>
+    </div>
+
+    <header class="p-6 border-b border-white/5 bg-black/20 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                    <i class="fa-solid fa-fire text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-xl tracking-tight text-white">SOLarator</h1>
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        <span class="text-[10px] uppercase tracking-widest text-gray-400 font-semibold" id="network-status">Mainnet</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="wallet-indicator" class="hidden">
+                <button onclick="app.walletManager.disconnect()" class="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition text-xs font-mono">
+                    <span id="wallet-address-display" class="text-orange-400"></span>
+                    <i class="fa-solid fa-power-off text-gray-500 hover:text-red-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 max-w-xl mx-auto w-full flex flex-col gap-6 relative">
+        
+        <section id="connect-section" class="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-6 fade-in">
+            <div class="space-y-2">
+                <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-500">
+                    Clean Your Wallet
+                </h2>
+                <p class="text-gray-400 text-sm max-w-xs mx-auto">
+                    Identify empty token accounts, burn them, and reclaim your SOL rent deposits safely.
+                </p>
+            </div>
+
+            <div class="w-full max-w-xs space-y-3">
+                <button id="connect-btn" class="group relative w-full py-4 px-6 rounded-2xl bg-white text-black font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-orange-400 to-red-500 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                    <span class="flex items-center justify-center gap-3">
+                        <i class="fa-solid fa-wallet"></i> Connect Wallet
+                    </span>
+                </button>
+                <div id="env-badge" class="text-[10px] text-gray-600 font-mono">
+                    Environment: <span id="env-text">Detecting...</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="dashboard-section" class="hidden flex-col gap-6 slide-up">
+            
+            <div class="glass-panel p-6 rounded-2xl relative overflow-hidden">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <p class="text-gray-400 text-xs font-bold uppercase tracking-wider">Reclaimable Rent</p>
+                        <h3 class="text-4xl font-bold text-white mt-1">
+                            <span id="total-sol-reclaim">0.00</span> <span class="text-lg text-orange-500">SOL</span>
+                        </h3>
+                    </div>
+                    <div class="p-3 bg-white/5 rounded-xl">
+                        <i class="fa-solid fa-sack-dollar text-orange-400 text-xl"></i>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="app.scanner.scan()" id="scan-btn" class="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition flex items-center justify-center gap-2 text-sm border border-white/5">
+                        <i class="fa-solid fa-rotate"></i> Scan Again
+                    </button>
+                </div>
+            </div>
+
+            <div id="list-container" class="flex flex-col gap-4 opacity-50 pointer-events-none transition-opacity">
+                <div class="flex justify-between items-end px-1">
+                    <h3 class="text-lg font-bold text-white">Empty Accounts <span id="account-count" class="text-gray-500 text-sm font-normal ml-2">(0)</span></h3>
+                    <div class="flex gap-3">
+                        <button onclick="app.ui.toggleSelectAll()" class="text-xs text-orange-400 hover:text-orange-300 font-medium">Select All</button>
+                    </div>
+                </div>
+
+                <div id="accounts-list" class="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-1 pb-10">
+                    <div class="text-center py-10 text-gray-500 text-sm border border-dashed border-gray-800 rounded-xl">
+                        Click 'Scan' to find empty accounts
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <div id="fab-area" class="fixed bottom-6 left-0 right-0 px-6 z-30 translate-y-24 transition-transform duration-300 flex justify-center">
+            <button onclick="app.burner.burnSelected()" id="burn-btn" disabled class="w-full max-w-md bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold text-lg py-4 rounded-2xl shadow-2xl shadow-orange-900/50 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] transition-transform">
+                <i class="fa-solid fa-fire-flame-curved"></i>
+                <span>BURN <span id="selected-count-badge">0</span> ACCOUNTS</span>
             </button>
         </div>
 
-        <div id="wallet-view" class="hidden">
-            <p>Cüzdan Başarıyla Bağlandı</p>
-            <div style="margin-bottom: 20px;">
-                <code id="pubkey-display">...</code>
-            </div>
-            
-            <div style="text-align: left; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                <small style="color: #64748b; display: block; margin-bottom: 4px;">Kullanıcı Bağlamı (Context)</small>
-                <span id="user-context" style="color: #e2e8f0; font-weight: 500;">Bilinmiyor</span>
-            </div>
+    </main>
 
-            <button id="sign-msg-btn" class="btn btn-secondary">Kimlik Doğrulama İmzası At</button>
-            <button id="disconnect-btn" class="btn btn-danger">Bağlantıyı Kes</button>
+    <footer class="p-6 text-center text-[10px] text-gray-600 mt-auto border-t border-white/5">
+        <p>Built for Farcaster Frames v2 • Powered by Solana Web3.js</p>
+    </footer>
+
+    <div id="wallet-modal" class="modal-overlay">
+        <div class="modal-content glass-panel rounded-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold">Connect Wallet</h3>
+                <button onclick="app.ui.closeModal()" class="text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div id="wallet-list" class="flex flex-col gap-3">
+                </div>
+            <p class="text-center text-xs text-gray-500 mt-4">
+                Don't see your wallet? Make sure it's installed and unlocked.
+            </p>
         </div>
-
-        <div id="status"></div>
     </div>
 
+    <div id="toast-container"></div>
+
     <script type="module">
-        // ---------------------------------------------------------
-        // 1. Kütüphane İçe Aktarımı (CDN üzerinden ES Modules)
-        // ---------------------------------------------------------
-        
-        // Solana Web3.js: Blokzincir etkileşimi için ana kütüphane.
-        // Versiyon 1.91.8 stabil ve yaygın kullanılan bir sürümdür.
-        import { 
-            Connection, 
-            PublicKey, 
-            clusterApiUrl 
-        } from 'https://esm.sh/@solana/web3.js@1.91.8';
-        
-        // Farcaster Frame SDK: Frame v2 özelliklerini yönetir.
-        // Alpha sürüm olduğu için güncellemeler sık olabilir.
+        /**
+         * SOLARATOR V2 - SINGLE FILE ARCHITECTURE
+         * 
+         * Modules:
+         * 1. Utils: Helpers for formatting, delay, etc.
+         * 2. WalletAdapter: Custom Vanilla JS implementation of Wallet Standard & Legacy Injection.
+         * 3. SolanaService: Handles RPC connections, scanning, and transaction building.
+         * 4. AppController: Glues UI, Farcaster Context, and Logic together.
+         */
+
+        import * as solanaWeb3 from 'https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js';
         import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.22';
 
-        // ---------------------------------------------------------
-        // 2. DOM Referansları ve Durum Yönetimi
-        // ---------------------------------------------------------
-        
-        const views = {
-            loading: document.getElementById('loading-state'),
-            connect: document.getElementById('connect-view'),
-            wallet: document.getElementById('wallet-view')
-        };
-        
-        const els = {
-            connectBtn: document.getElementById('connect-btn'),
-            disconnectBtn: document.getElementById('disconnect-btn'),
-            signMsgBtn: document.getElementById('sign-msg-btn'),
-            pubkeyDisplay: document.getElementById('pubkey-display'),
-            userContext: document.getElementById('user-context'),
-            status: document.getElementById('status')
+        // --- 1. CONFIG & UTILS ---
+        const CONFIG = {
+            // Using a high-performance public RPC. In production, use a private Helius/QuickNode key.
+            RPC_URL: "https://mainnet.helius-rpc.com/?api-key=60ab6dbf-aa02-4ff8-9e12-b26abdcd40cc", 
+            TOKEN_PROGRAM_ID: new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+            RENT_PER_ACCOUNT: 0.00203928, // Approx SOL reclaimed per closed account
+            MAX_TX_SIZE: 20 // Instructions per transaction (Conservative)
         };
 
-        // Uygulama Durumu (State)
-        let state = {
-            provider: null,      // Seçilen Cüzdan Sağlayıcısı (Phantom/Solflare objesi)
-            publicKey: null,     // Bağlı cüzdanın açık anahtarı
-            isConnected: false,
-            farcasterUser: null  // SDK'dan gelen kullanıcı verisi
+        const Utils = {
+            shortenKey: (key) => key.slice(0, 4) + '...' + key.slice(-4),
+            sleep: (ms) => new Promise(r => setTimeout(r, ms)),
+            lamportsToSol: (lamports) => (lamports / 1e9).toFixed(5)
         };
 
-        // ---------------------------------------------------------
-        // 3. Yardımcı Fonksiyonlar (Utils)
-        // ---------------------------------------------------------
-
-        // Kullanıcıya bildirim gösterme fonksiyonu
-        function showStatus(msg, type = 'info') {
-            els.status.innerText = msg;
-            els.status.className = 'visible';
-            els.status.style.color = type === 'error'? 'var(--error-color)' : 
-                                     type === 'success'? 'var(--secondary-color)' : '#94a3b8';
-            
-            // 3 saniye sonra mesajı gizle
-            setTimeout(() => {
-                els.status.className = '';
-            }, 3000);
-        }
-
-        // Görünüm değiştirme (Router benzeri yapı)
-        function switchView(viewName) {
-            Object.values(views).forEach(el => el.classList.add('hidden'));
-            views[viewName].classList.remove('hidden');
-        }
-
-        // Adres kısaltma (örn: 8x...4k2)
-        function truncateAddress(addr) {
-            if (!addr) return '';
-            return `${addr.slice(0, 6)}...${addr.slice(-6)}`;
-        }
-
-        // ---------------------------------------------------------
-        // 4. Solana Cüzdan Tespit Mantığı (Provider Discovery)
-        // ---------------------------------------------------------
-        
-        /**
-         * Tarayıcıdaki mevcut cüzdanları tarar ve en uygun olanı döndürür.
-         * Bu fonksiyon, "Race Condition"ı önlemek için çağrıldığı andaki window durumunu kontrol eder.
-         */
-        function getSolanaProvider() {
-            // 1. Phantom Kontrolü (Öncelikli)
-            if ('phantom' in window) {
-                const provider = window.phantom?.solana;
-                if (provider?.isPhantom) return provider;
+        // --- 2. VANILLA WALLET ADAPTER (The Core) ---
+        class WalletAdapter {
+            constructor() {
+                this.connected = false;
+                this.publicKey = null;
+                this.provider = null;
+                this.adapters =; // Store detected standard adapters
             }
 
-            // 2. Solflare Kontrolü
-            if ('solflare' in window) {
-                return window.solflare;
+            /**
+             * Scans the window and event listeners for wallets.
+             * Returns a list of available wallet objects.
+             */
+            getWallets() {
+                const wallets =;
+
+                // 1. Legacy Injection (Phantom, Solflare, etc.)
+                if (window.phantom?.solana?.isPhantom) {
+                    wallets.push({
+                        name: 'Phantom',
+                        icon: 'https://www.phantom.app/img/logo.png', // Or use FontAwesome
+                        provider: window.phantom.solana,
+                        type: 'legacy'
+                    });
+                }
+                
+                if (window.solflare?.isSolflare) {
+                    wallets.push({
+                        name: 'Solflare',
+                        icon: 'https://solflare.com/assets/logo.svg',
+                        provider: window.solflare,
+                        type: 'legacy'
+                    });
+                }
+
+                // 2. Fallback window.solana (Could be Phantom, Brave, etc.)
+                if (window.solana &&!wallets.find(w => w.provider === window.solana)) {
+                    wallets.push({
+                        name: 'Browser Wallet',
+                        icon: '',
+                        provider: window.solana,
+                        type: 'legacy'
+                    });
+                }
+
+                // 3. Farcaster / Mobile Injection Check
+                // In Warpcast webview, sometimes provider is just window.solana but acts different.
+                // We handle "Injected" specifically for the Frame context.
+
+                return wallets;
             }
 
-            // 3. Genel "window.solana" Kontrolü (Legacy)
-            if ('solana' in window) {
-                const provider = window.solana;
-                if (provider.isPhantom |
-
-| provider.isSolflare) return provider;
-            }
-
-            return null;
-        }
-
-        // ---------------------------------------------------------
-        // 5. Ana İş Mantığı (Business Logic)
-        // ---------------------------------------------------------
-
-        // Cüzdan Bağlama Süreci
-        async function connectWallet() {
-            try {
-                const provider = getSolanaProvider();
-
-                if (!provider) {
-                    // Cüzdan yoksa, mobil veya masaüstü durumuna göre yönlendirme
-                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                    if (isMobile) {
-                        showStatus("Cüzdan bulunamadı. Phantom uygulamasına yönlendiriliyor...", "error");
-                        // Deep Link ile Phantom açma (Universal Link)
-                        window.location.href = `https://phantom.app/ul/browse/${encodeURIComponent(window.location.href)}?ref=${encodeURIComponent(window.location.href)}`;
+            async connect(provider) {
+                try {
+                    // Handle Standard vs Legacy connect
+                    let response;
+                    if (provider.connect) {
+                        response = await provider.connect();
                     } else {
-                        window.open("https://phantom.app/", "_blank");
-                        showStatus("Lütfen Phantom veya Solflare cüzdanı yükleyin.", "error");
+                        throw new Error("Invalid provider");
                     }
+
+                    // Normalize Public Key
+                    if (response.publicKey) {
+                        this.publicKey = new solanaWeb3.PublicKey(response.publicKey);
+                    } else if (provider.publicKey) {
+                        this.publicKey = new solanaWeb3.PublicKey(provider.publicKey);
+                    } else {
+                        throw new Error("Could not retrieve Public Key");
+                    }
+
+                    this.provider = provider;
+                    this.connected = true;
+                    return this.publicKey;
+
+                } catch (err) {
+                    console.error("Wallet connection failed:", err);
+                    throw err;
+                }
+            }
+
+            async disconnect() {
+                if (this.provider && this.provider.disconnect) {
+                    try { await this.provider.disconnect(); } catch (e) { console.warn(e); }
+                }
+                this.connected = false;
+                this.publicKey = null;
+                this.provider = null;
+            }
+
+            async signAndSendAll(transactions) {
+                if (!this.provider) throw new Error("Wallet not connected");
+                
+                // If provider supports signAllTransactions (Phantom/Solflare do)
+                if (this.provider.signAllTransactions) {
+                    const signedTxs = await this.provider.signAllTransactions(transactions);
+                    const signatures =;
+                    const connection = new solanaWeb3.Connection(CONFIG.RPC_URL);
+                    
+                    // Send sequentially to avoid rate limits
+                    for (const tx of signedTxs) {
+                        const raw = tx.serialize();
+                        const sig = await connection.sendRawTransaction(raw, { skipPreflight: false });
+                        signatures.push(sig);
+                        // Optional: wait a bit between sends
+                        await Utils.sleep(200); 
+                    }
+                    return signatures;
+                } else {
+                    // Fallback: Sign one by one (UX is bad but works)
+                    const signatures =;
+                    for (const tx of transactions) {
+                        const { signature } = await this.provider.signAndSendTransaction(tx);
+                        signatures.push(signature);
+                    }
+                    return signatures;
+                }
+            }
+        }
+
+        // --- 3. SOLANA SERVICE (Burning Logic) ---
+        class SolanaService {
+            constructor() {
+                this.connection = new solanaWeb3.Connection(CONFIG.RPC_URL, 'confirmed');
+            }
+
+            async fetchEmptyAccounts(ownerPublicKey) {
+                // Fetch parsed accounts
+                const accounts = await this.connection.getParsedTokenAccountsByOwner(
+                    ownerPublicKey,
+                    { programId: CONFIG.TOKEN_PROGRAM_ID }
+                );
+
+                // Filter for Amount = 0
+                return accounts.value
+                   .filter(acc => {
+                        const info = acc.account.data.parsed.info;
+                        return info.tokenAmount.uiAmount === 0; // Strictly 0
+                    })
+                   .map(acc => ({
+                        pubkey: acc.pubkey,
+                        mint: acc.account.data.parsed.info.mint,
+                        decimals: acc.account.data.parsed.info.tokenAmount.decimals
+                    }));
+            }
+
+            async createBurnTransactions(walletPubKey, accountsToBurn) {
+                const transactions =;
+                const latestBlockhash = await this.connection.getLatestBlockhash();
+
+                // Batch instructions
+                for (let i = 0; i < accountsToBurn.length; i += CONFIG.MAX_TX_SIZE) {
+                    const batch = accountsToBurn.slice(i, i + CONFIG.MAX_TX_SIZE);
+                    const transaction = new solanaWeb3.Transaction();
+                    transaction.recentBlockhash = latestBlockhash.blockhash;
+                    transaction.feePayer = walletPubKey;
+
+                    batch.forEach(acc => {
+                        // Create Close Account Instruction
+                        // Keys:
+                        const keys =;
+                        // Token Program ID instruction 9 is CloseAccount
+                        const instruction = new solanaWeb3.TransactionInstruction({
+                            keys,
+                            programId: CONFIG.TOKEN_PROGRAM_ID,
+                            data: Uint8Array.of(9) // Instruction index for CloseAccount
+                        });
+                        transaction.add(instruction);
+                    });
+
+                    transactions.push(transaction);
+                }
+
+                return transactions;
+            }
+        }
+
+        // --- 4. UI CONTROLLER ---
+        class UIController {
+            constructor() {
+                this.els = {
+                    connectSection: document.getElementById('connect-section'),
+                    dashboardSection: document.getElementById('dashboard-section'),
+                    walletAddress: document.getElementById('wallet-address-display'),
+                    walletIndicator: document.getElementById('wallet-indicator'),
+                    envText: document.getElementById('env-text'),
+                    listContainer: document.getElementById('list-container'),
+                    accountsList: document.getElementById('accounts-list'),
+                    countBadge: document.getElementById('account-count'),
+                    totalSol: document.getElementById('total-sol-reclaim'),
+                    fabArea: document.getElementById('fab-area'),
+                    burnBtn: document.getElementById('burn-btn'),
+                    selectedCountBadge: document.getElementById('selected-count-badge'),
+                    walletModal: document.getElementById('wallet-modal'),
+                    walletList: document.getElementById('wallet-list')
+                };
+                this.selectedIndices = new Set();
+                this.accounts =; // Cached accounts
+            }
+
+            setEnv(text) { this.els.envText.innerText = text; }
+
+            showDashboard(publicKey) {
+                this.els.connectSection.classList.add('hidden');
+                this.els.dashboardSection.classList.remove('hidden');
+                this.els.dashboardSection.classList.add('flex'); // restore flex
+                this.els.walletIndicator.classList.remove('hidden');
+                this.els.walletAddress.innerText = Utils.shortenKey(publicKey.toString());
+            }
+
+            resetToConnect() {
+                this.els.connectSection.classList.remove('hidden');
+                this.els.dashboardSection.classList.add('hidden');
+                this.els.dashboardSection.classList.remove('flex');
+                this.els.walletIndicator.classList.add('hidden');
+                this.els.fabArea.classList.add('translate-y-24');
+                this.accounts =;
+                this.renderAccounts();
+            }
+
+            renderAccounts(accounts) {
+                this.accounts = accounts;
+                this.selectedIndices.clear();
+                this.updateSelectionUI();
+
+                this.els.listContainer.classList.remove('opacity-50', 'pointer-events-none');
+                this.els.countBadge.innerText = `(${accounts.length})`;
+                
+                if (accounts.length === 0) {
+                    this.els.accountsList.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-12 text-gray-500 border border-dashed border-white/10 rounded-xl bg-white/5">
+                            <i class="fa-solid fa-check-circle text-3xl mb-2 text-green-500"></i>
+                            <p>Your wallet is clean!</p>
+                            <p class="text-xs mt-1">No empty accounts found.</p>
+                        </div>
+                    `;
                     return;
                 }
 
-                showStatus("Cüzdan onayı bekleniyor...");
-                
-                // Cüzdan penceresini aç
-                const resp = await provider.connect();
-                
-                // Başarılı bağlantı sonrası durum güncellemesi
-                state.provider = provider;
-                state.publicKey = resp.publicKey.toString();
-                state.isConnected = true;
+                let html = '';
+                accounts.forEach((acc, idx) => {
+                    html += `
+                        <div onclick="app.ui.toggleIndex(${idx})" class="group cursor-pointer p-4 rounded-xl bg-white/5 border border-white/5 hover:border-orange-500/50 hover:bg-white/10 transition flex items-center justify-between select-none">
+                            <div class="flex items-center gap-4">
+                                <div class="custom-checkbox-wrapper">
+                                    <input type="checkbox" class="custom-checkbox text-orange-500" id="cb-${idx}" onchange="app.ui.toggleIndex(${idx})">
+                                </div>
+                                <div>
+                                    <div class="font-mono text-xs text-gray-300 truncate w-32 md:w-48">${acc.pubkey.toString()}</div>
+                                    <div class="text-[10px] text-gray-500">Mint: ${Utils.shortenKey(acc.mint)}</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs font-bold text-orange-400">+0.002 SOL</div>
+                                <div class="text-[9px] text-gray-600">Rent</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                this.els.accountsList.innerHTML = html;
+            }
 
-                // UI Güncelleme
-                els.pubkeyDisplay.innerText = truncateAddress(state.publicKey);
-                switchView('wallet');
-                showStatus("Bağlantı Başarılı!", "success");
-
-            } catch (err) {
-                console.error("Bağlantı Hatası:", err);
-                // Kullanıcı reddettiyse (User rejected the request)
-                if (err.code === 4001) {
-                    showStatus("Bağlantı isteği reddedildi.", "error");
+            toggleIndex(idx) {
+                const cb = document.getElementById(`cb-${idx}`);
+                // prevent recursive event trigger if clicked directly on cb vs div
+                if (this.selectedIndices.has(idx)) {
+                    this.selectedIndices.delete(idx);
+                    if(cb) cb.checked = false;
                 } else {
-                    showStatus(`Hata: ${err.message}`, "error");
+                    this.selectedIndices.add(idx);
+                    if(cb) cb.checked = true;
                 }
+                this.updateSelectionUI();
+            }
+
+            toggleSelectAll() {
+                if (this.selectedIndices.size === this.accounts.length) {
+                    this.selectedIndices.clear();
+                    document.querySelectorAll('.custom-checkbox').forEach(el => el.checked = false);
+                } else {
+                    this.accounts.forEach((_, i) => this.selectedIndices.add(i));
+                    document.querySelectorAll('.custom-checkbox').forEach(el => el.checked = true);
+                }
+                this.updateSelectionUI();
+            }
+
+            updateSelectionUI() {
+                const count = this.selectedIndices.size;
+                this.els.selectedCountBadge.innerText = count;
+                this.els.totalSol.innerText = (count * CONFIG.RENT_PER_ACCOUNT).toFixed(4);
+                
+                // Toggle FAB
+                if (count > 0) {
+                    this.els.fabArea.classList.remove('translate-y-24');
+                    this.els.burnBtn.disabled = false;
+                } else {
+                    this.els.fabArea.classList.add('translate-y-24');
+                    this.els.burnBtn.disabled = true;
+                }
+            }
+
+            setLoading(isLoading, msg = "Loading...") {
+                // Implement a simple overlay loader or button loader
+                const btn = document.getElementById('scan-btn');
+                if (isLoading) {
+                    btn.innerHTML = `<div class="spinner border-white/20 border-t-white w-4 h-4"></div> ${msg}`;
+                    btn.disabled = true;
+                } else {
+                    btn.innerHTML = `<i class="fa-solid fa-rotate"></i> Scan Again`;
+                    btn.disabled = false;
+                }
+            }
+
+            toast(msg, type = 'info') {
+                const container = document.getElementById('toast-container');
+                const el = document.createElement('div');
+                el.className = `toast ${type}`;
+                const icon = type === 'success'? 'fa-check' : type === 'error'? 'fa-triangle-exclamation' : 'fa-info-circle';
+                el.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${msg}</span>`;
+                container.appendChild(el);
+                
+                requestAnimationFrame(() => el.classList.add('show'));
+                setTimeout(() => {
+                    el.classList.remove('show');
+                    setTimeout(() => el.remove(), 300);
+                }, 3000);
+            }
+
+            openModal(wallets) {
+                this.els.walletList.innerHTML = '';
+                wallets.forEach(w => {
+                    const btn = document.createElement('button');
+                    btn.className = "w-full p-4 flex items-center gap-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition text-left";
+                    btn.innerHTML = `
+                        <img src="${w.icon |
+
+| 'https://placehold.co/32x32/333/fff?text=W'}" class="w-8 h-8 rounded-lg" alt="${w.name}">
+                        <span class="font-bold">${w.name}</span>
+                    `;
+                    btn.onclick = () => app.connectWallet(w.provider);
+                    this.els.walletList.appendChild(btn);
+                });
+                this.els.walletModal.classList.add('active');
+            }
+
+            closeModal() {
+                this.els.walletModal.classList.remove('active');
             }
         }
 
-        // Bağlantıyı Kesme
-        async function disconnectWallet() {
-            if (state.provider) {
+        // --- 5. MAIN APP CONTROLLER ---
+        class App {
+            constructor() {
+                this.walletManager = new WalletAdapter();
+                this.scanner = new SolanaService();
+                this.ui = new UIController();
+                this.isFrame = false;
+            }
+
+            async init() {
+                // Check Farcaster Context
                 try {
-                    await state.provider.disconnect();
-                } catch (e) { console.warn("Disconnect hatası yoksayıldı", e); }
-            }
-            // State sıfırlama
-            state = { provider: null, publicKey: null, isConnected: false, farcasterUser: state.farcasterUser };
-            switchView('connect');
-            showStatus("Bağlantı kesildi.");
-        }
-
-        // Mesaj İmzalama (Sign Message)
-        async function signMessage() {
-            if (!state.provider) return;
-
-            try {
-                // İmzalanacak mesaj
-                const message = `Farcaster Frame Login\nUser: ${state.farcasterUser?.username |
-
-| 'Anon'}\nTimestamp: ${Date.now()}`;
-                const encodedMessage = new TextEncoder().encode(message);
-                
-                showStatus("İmza bekleniyor...");
-                
-                // Cüzdandan imza iste
-                const signedMessage = await state.provider.signMessage(encodedMessage, "utf8");
-                
-                // İmzayı Base64 formatına çevir (Sunucuya göndermek için ideal format)
-                // Saf JS'de Buffer olmadığı için 'btoa' ve 'String.fromCharCode' kullanıyoruz.
-                // Not: signedMessage.signature bir Uint8Array döner.
-                let signatureBase64 = "";
-                if (signedMessage.signature) {
-                     signatureBase64 = btoa(String.fromCharCode(...signedMessage.signature));
-                } else {
-                    // Solflare bazen doğrudan signature array dönebilir
-                    signatureBase64 = btoa(String.fromCharCode(...signedMessage));
+                    const context = await sdk.context; // Assuming v2 SDK behavior
+                    if (context && context.user) {
+                        this.isFrame = true;
+                        this.ui.setEnv("Farcaster Frame");
+                        sdk.actions.ready(); // CRITICAL: Signal ready
+                    } else {
+                        this.ui.setEnv("Standard Browser");
+                    }
+                } catch (e) {
+                    console.log("Not in Frame context");
+                    this.ui.setEnv("Browser / Web");
                 }
 
-                console.log("Oluşturulan İmza:", signatureBase64);
-                showStatus("Mesaj başarıyla imzalandı! (Konsola bakınız)", "success");
-                
-            } catch (err) {
-                console.error("İmza Hatası:", err);
-                showStatus("İmzalama başarısız.", "error");
+                // Bind Event Listeners
+                document.getElementById('connect-btn').onclick = () => this.handleConnectClick();
             }
-        }
 
-        // ---------------------------------------------------------
-        // 6. Başlatma ve Olay Dinleyicileri (Initialization)
-        // ---------------------------------------------------------
+            async handleConnectClick() {
+                if (this.isFrame) {
+                    // Frame Context: Auto-connect to injected provider
+                    const provider = window.phantom?.solana |
 
-        async function init() {
-            try {
-                // Farcaster SDK Yükleniyor...
-                // SDK'nın 'ready' metodunu çağırmak, Farcaster istemcisine 
-                // "Ben hazırım, yükleme ekranını kaldır" sinyali gönderir.
-                await sdk.actions.ready();
-
-                // Kullanıcı Bağlamını (Context) Çekme
-                const context = await sdk.context;
-                if (context && context.user) {
-                    state.farcasterUser = context.user;
-                    els.userContext.innerText = `@${context.user.username}`;
-                    console.log("Farcaster Context Yüklendi:", context);
-                }
-
-                // Cüzdan otomatik bağlanmayı dene (Eğer daha önce izin verildiyse)
-                // 'onlyIfTrusted' parametresi, pop-up açmadan bağlanmayı dener.
-                const provider = getSolanaProvider();
-                if (provider) {
-                    try {
-                         // Bu özellik her cüzdanda standart olmayabilir, try-catch içinde deniyoruz.
-                         const resp = await provider.connect({ onlyIfTrusted: true });
-                         state.provider = provider;
-                         state.publicKey = resp.publicKey.toString();
-                         state.isConnected = true;
-                         els.pubkeyDisplay.innerText = truncateAddress(state.publicKey);
-                         switchView('wallet');
-                    } catch (e) {
-                        // Otomatik bağlantı başarısız, kullanıcı manuel bağlanmalı
-                        switchView('connect');
+| window.solana;
+                    if (provider) {
+                        await this.connectWallet(provider);
+                    } else {
+                        this.ui.toast("No wallet found. Try opening in Phantom.", "error");
+                        // Mobile fallback deep link
+                        if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                            window.location.href = `https://phantom.app/ul/browse/${encodeURIComponent(window.location.href)}?ref=${encodeURIComponent(window.location.href)}`;
+                        }
                     }
                 } else {
-                    switchView('connect');
+                    // Browser Context: Show Modal
+                    const wallets = this.walletManager.getWallets();
+                    if (wallets.length === 0) {
+                        this.ui.toast("No Solana wallets detected!", "error");
+                        return;
+                    }
+                    this.ui.openModal(wallets);
                 }
+            }
 
-            } catch (err) {
-                console.error("Frame Başlatma Hatası:", err);
-                showStatus("Uygulama başlatılamadı.", "error");
-                // Hata durumunda bile connect ekranını göster ki kullanıcı tamamen bloke olmasın
-                switchView('connect');
+            async connectWallet(provider) {
+                this.ui.closeModal();
+                try {
+                    this.ui.toast("Connecting...", "info");
+                    const pubKey = await this.walletManager.connect(provider);
+                    this.ui.showDashboard(pubKey);
+                    this.ui.toast("Wallet Connected!", "success");
+                    
+                    // Auto-scan after connection
+                    this.scan();
+                } catch (err) {
+                    this.ui.toast(err.message, "error");
+                }
+            }
+
+            async scan() {
+                if (!this.walletManager.publicKey) return;
+                
+                this.ui.setLoading(true, "Scanning Blockchain...");
+                try {
+                    const accounts = await this.scanner.fetchEmptyAccounts(this.walletManager.publicKey);
+                    this.ui.renderAccounts(accounts);
+                    this.ui.toast(`Found ${accounts.length} burnable accounts`, "success");
+                } catch (err) {
+                    this.ui.toast("Scan Failed: " + err.message, "error");
+                } finally {
+                    this.ui.setLoading(false);
+                }
+            }
+
+            async burnSelected() {
+                const selectedAccounts = Array.from(this.ui.selectedIndices).map(i => this.ui.accounts[i]);
+                if (selectedAccounts.length === 0) return;
+
+                const burnBtn = document.getElementById('burn-btn');
+                const originalText = burnBtn.innerHTML;
+                burnBtn.disabled = true;
+                burnBtn.innerHTML = `<div class="spinner border-white/20 border-t-white w-5 h-5"></div> Preparing...`;
+
+                try {
+                    // 1. Build Transactions
+                    const transactions = await this.scanner.createBurnTransactions(
+                        this.walletManager.publicKey,
+                        selectedAccounts
+                    );
+
+                    this.ui.toast(`Please sign ${transactions.length} transaction(s)`, "info");
+
+                    // 2. Sign and Send
+                    const signatures = await this.walletManager.signAndSendAll(transactions);
+                    
+                    console.log("Signatures:", signatures);
+                    this.ui.toast(`Successfully burned ${selectedAccounts.length} accounts!`, "success");
+                    
+                    // 3. Refresh
+                    await Utils.sleep(2000); // Wait for propagation
+                    this.scan();
+
+                } catch (err) {
+                    console.error(err);
+                    this.ui.toast("Burn Failed: " + (err.message |
+
+| "User rejected"), "error");
+                } finally {
+                    burnBtn.innerHTML = originalText;
+                    burnBtn.disabled = false;
+                }
             }
         }
 
-        // Event Listener'lar
-        els.connectBtn.addEventListener('click', connectWallet);
-        els.disconnectBtn.addEventListener('click', disconnectWallet);
-        els.signMsgBtn.addEventListener('click', signMessage);
+        // Global Instance for HTML onclick binding
+        window.app = new App();
+        
+        // Expose sub-modules for direct HTML access
+        window.app.scanner = window.app.scanner;
+        window.app.burner = window.app; // shorthand
+        window.app.ui = window.app.ui;
 
-        // Sayfa tamamen yüklendiğinde başlat
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
+        // Initialize on Load
+        document.addEventListener('DOMContentLoaded', () => window.app.init());
 
     </script>
 </body>
