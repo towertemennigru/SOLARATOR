@@ -300,7 +300,6 @@
 };
 
         // --- 2. WALLET MANAGER (Güncellendi) ---
-// --- 2. WALLET MANAGER (Güncellendi) ---
 const WalletManager = {
     adapters: [],
     farcasterProvider: null,
@@ -313,9 +312,17 @@ const WalletManager = {
                     console.log("Wallet registering:", adapter.name);
                     
                     // Frame modunda TÜM cüzdanları kabul et (filtrelemeyi kaldır)
+                    // Farcaster Wallet genellikle "Farcaster Wallet" olarak gelir
                     if (!this.adapters.find(a => a.name === adapter.name)) {
                         this.adapters.push(adapter);
                         console.log("✅ Wallet Registered:", adapter.name);
+                        
+                        // Frame modunda ve Farcaster Wallet bulunursa
+                        if (state.env === 'frame' && adapter.name.includes('Farcaster')) {
+                            console.log("🎯 Farcaster Wallet detected!");
+                            // Otomatik bağlanmayı deneyebiliriz
+                            // setTimeout(() => app.performConnect(adapter.name), 500);
+                        }
                     }
                 }
             });
@@ -336,9 +343,9 @@ const WalletManager = {
         // Farcaster'ın kendi wallet provider'ını dinle
         if (state.env === 'frame') {
             const interval = setInterval(() => {
-                // 1. window.solana'yı kontrol et (Farcaster bunu inject eder)
+                // 1. window.solana'yı kontrol et
                 if (window.solana && window.solana.connect && !this.farcasterProvider) {
-                    console.log("Found window.solana in Frame:", window.solana);
+                    console.log("Found window.solana in Frame");
                     this.farcasterProvider = window.solana;
                     clearInterval(interval);
                 }
@@ -349,31 +356,36 @@ const WalletManager = {
                     this.farcasterProvider = window.farcasterWallet;
                     clearInterval(interval);
                 }
+                
+                // 3. Frame SDK'nın wallet'ını kontrol et
+                if (sdk.wallet && !this.farcasterProvider) {
+                    console.log("Found wallet via Frame SDK wallet property");
+                    this.farcasterProvider = sdk.wallet;
+                    clearInterval(interval);
+                }
             }, 500);
             
-            // 5 saniye sonra timeout
-            setTimeout(() => clearInterval(interval), 5000);
+            // 10 saniye sonra timeout
+            setTimeout(() => clearInterval(interval), 10000);
         }
     },
 
     findInjectedProvider() {
-        // Frame modunda önce window.solana'yı kontrol et (Farcaster bunu inject eder)
+        // Frame modunda tüm olasılıkları kontrol et
         if (state.env === 'frame') {
-            console.log("Frame mode: Looking for injected provider...");
+            if (this.farcasterProvider) return this.farcasterProvider;
+            if (window.farcasterWallet) return window.farcasterWallet;
+            if (window.farcaster?.solana) return window.farcaster.solana;
+            if (sdk.wallet) return sdk.wallet;
             
-            // ÖNEMLİ: Farcaster, wallet'ı window.solana üzerinden inject eder
+            // Farcaster'ın window.solana'ya inject ettiğini kontrol et
             if (window.solana && window.solana.connect) {
-                console.log("Using window.solana as Farcaster wallet");
-                return window.solana;
+                // Phantom/Solflare değilse (Frame'de olmaz ama kontrol edelim)
+                if (!window.solana.isPhantom && !window.solana.isSolflare) {
+                    return window.solana;
+                }
             }
             
-            // Alternatif olarak window.farcasterWallet
-            if (window.farcasterWallet) {
-                console.log("Using window.farcasterWallet");
-                return window.farcasterWallet;
-            }
-            
-            console.warn("No injected provider found in Frame mode");
             return null;
         }
 
@@ -385,15 +397,20 @@ const WalletManager = {
     },
 
     async connect(adapterNameOrProvider) {
-        console.log("WalletManager.connect called with:", adapterNameOrProvider);
-        
         try {
-            // 1. Standart wallet adaptörü ile (adapterName string ise)
+            // Frame modunda ve doğrudan provider verilmişse
+            if (state.env === 'frame' && typeof adapterNameOrProvider === 'object') {
+                const provider = adapterNameOrProvider;
+                const resp = await provider.connect();
+                state.publicKey = resp.publicKey;
+                state.wallet = provider;
+                return state.publicKey;
+            }
+            
+            // Standart wallet adaptörü ile
             if (typeof adapterNameOrProvider === 'string') {
-                console.log("Looking for adapter:", adapterNameOrProvider);
                 const adapter = this.adapters.find(a => a.name === adapterNameOrProvider);
                 if (adapter) {
-                    console.log("Found adapter, attempting standard connect");
                     await adapter.features['standard:connect'].connect();
                     state.publicKey = new PublicKey(adapter.accounts[0].address);
                     state.wallet = {
@@ -402,67 +419,25 @@ const WalletManager = {
                         signAllTransactions: async (txs) => {
                             // Farcaster Wallet için özel işleme
                             if (adapter.name.includes('Farcaster')) {
-                                console.log("Farcaster wallet signing");
                                 return await Promise.all(txs.map(tx => adapter.signTransaction(tx)));
                             }
                             return adapter.signAllTransactions(txs);
                         }
                     };
-                    console.log("Standard wallet connected:", state.publicKey.toString());
                     return state.publicKey;
-                }
-            }
-            
-            // 2. Provider nesnesi ile (injected provider)
-            if (typeof adapterNameOrProvider === 'object') {
-                console.log("Connecting with provider object:", adapterNameOrProvider);
-                const provider = adapterNameOrProvider;
-                
-                // Farcaster Wallet API'si farklı olabilir, try-catch ile dene
-                try {
-                    let resp;
-                    
-                    // Method 1: Standart connect()
-                    if (typeof provider.connect === 'function') {
-                        resp = await provider.connect();
-                    }
-                    // Method 2: Farcaster'ın özel methodu olabilir
-                    else if (typeof provider.request === 'function') {
-                        resp = await provider.request({ method: 'connect' });
-                    }
-                    // Method 3: Direkt publicKey property'si olabilir
-                    else if (provider.publicKey) {
-                        resp = { publicKey: provider.publicKey };
-                    } else {
-                        throw new Error("No valid connect method found on provider");
-                    }
-                    
-                    state.publicKey = resp.publicKey || provider.publicKey;
-                    state.wallet = provider;
-                    
-                    // Farcaster wallet'ı için signAllTransactions implementasyonu
-                    if (!state.wallet.signAllTransactions && state.wallet.signTransaction) {
-                        state.wallet.signAllTransactions = async (txs) => {
-                            return Promise.all(txs.map(tx => state.wallet.signTransaction(tx)));
-                        };
-                    }
-                    
-                    console.log("Provider connected:", state.publicKey?.toString());
-                    return state.publicKey;
-                } catch (connectError) {
-                    console.error("Provider connect error:", connectError);
-                    throw connectError;
                 }
             }
 
-            // 3. Fallback: injected provider'ı bul ve bağlan
-            console.log("Looking for injected provider...");
+            // Fallback: injected provider
             const provider = this.findInjectedProvider();
             if (!provider) {
                 throw new Error("No wallet found. Make sure you're using a Farcaster client with Solana support.");
             }
 
-            return await this.connect(provider); // Recursive call with provider object
+            const resp = await provider.connect();
+            state.publicKey = resp.publicKey;
+            state.wallet = provider;
+            return state.publicKey;
 
         } catch (e) {
             console.error("Connect error:", e);
@@ -651,94 +626,47 @@ const WalletManager = {
             async connect() {
     // --- SENARYO 1: FRAME MODU ---
     if (state.env === 'frame') {
-        UI.showToast("Connecting to Farcaster Wallet...", "info");
+        UI.showToast("Looking for Farcaster Wallet...", "info");
         
-        // 0.5 saniye bekle, wallet'ın yüklenmesi için
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // 1. Önce Standart Wallet adaptörlerini kontrol et
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Biraz bekle
         
-        // 1. Önce injected provider'ı kontrol et (Farcaster window.solana'ya inject eder)
-        console.log("Frame mode: Checking for injected provider...");
-        const injected = this.findInjectedProviderForFrame();
+        if (WalletManager.adapters.length > 0) {
+            // Frame'de genellikle sadece bir wallet olur (Farcaster Wallet)
+            const frameWallet = WalletManager.adapters[0];
+            console.log("Using frame wallet:", frameWallet?.name);
+            return this.performConnect(frameWallet?.name || "Farcaster Wallet");
+        }
         
+        // 2. Injected provider'ı kontrol et
+        const injected = WalletManager.findInjectedProvider();
         if (injected) {
-            console.log("Found injected provider, attempting connect");
+            console.log("Using injected provider:", injected);
             return this.performConnect(injected);
         }
         
-        // 2. Standart Wallet adaptörlerini kontrol et
-        if (WalletManager.adapters.length > 0) {
-            console.log("Found adapters:", WalletManager.adapters.map(a => a.name));
-            
-            // Farcaster Wallet'ı bul (genellikle "Farcaster" veya "Farcaster Wallet" adında)
-            const farcasterAdapter = WalletManager.adapters.find(a => 
-                a.name.toLowerCase().includes('farcaster')
-            );
-            
-            if (farcasterAdapter) {
-                console.log("Found Farcaster adapter:", farcasterAdapter.name);
-                return this.performConnect(farcasterAdapter.name);
+        // 3. Frame SDK üzerinden wallet'ı kontrol et
+        try {
+            if (sdk.wallet) {
+                console.log("Using SDK wallet");
+                return this.performConnect(sdk.wallet);
             }
-            
-            // Farcaster bulunamazsa ilk adapter'ı dene
-            const firstAdapter = WalletManager.adapters[0];
-            console.log("Using first adapter:", firstAdapter?.name);
-            return this.performConnect(firstAdapter?.name);
-        }
+        } catch (e) {}
         
-        // 3. Hiçbiri yoksa yardımcı mesaj göster
+        // 4. Hiçbiri yoksa kullanıcıya yardımcı mesaj göster
         UI.showToast(
-            "Farcaster Wallet not detected.\n" +
-            "Make sure you're using Warpcast with Solana support enabled.", 
+            "Farcaster Wallet not found. Try:\n" +
+            "1. Refresh the frame\n" +
+            "2. Update your Farcaster client\n" +
+            "3. Use Warpcast with Solana support", 
             "error"
         );
-        
-        // Debug için konsola bilgi yaz
-        console.error("No wallet found in Frame mode. Available objects:");
-        console.log("window.solana:", window.solana);
-        console.log("window.farcasterWallet:", window.farcasterWallet);
-        console.log("WalletManager.adapters:", WalletManager.adapters);
-        
         return;
     }
 
     // --- SENARYO 2: BROWSER MODU ---
     this.populateModal();
     UI.toggleModal(true);
-},
-
-// Yeni yardımcı fonksiyon: Frame için injected provider bul
-findInjectedProviderForFrame() {
-    console.log("Looking for Farcaster injected wallet...");
-    
-    // 1. window.solana (Farcaster'ın en yaygın injection noktası)
-    if (window.solana) {
-        console.log("Found window.solana:", {
-            hasConnect: typeof window.solana.connect === 'function',
-            hasRequest: typeof window.solana.request === 'function',
-            isPhantom: window.solana.isPhantom,
-            isSolflare: window.solana.isSolflare
-        });
-        
-        // Farcaster'ın window.solana'ya inject ettiği wallet
-        // Genellikle isPhantom ve isSolflare false olur
-        if (typeof window.solana.connect === 'function' || typeof window.solana.request === 'function') {
-            return window.solana;
-        }
-    }
-    
-    // 2. window.farcasterWallet
-    if (window.farcasterWallet) {
-        console.log("Found window.farcasterWallet:", window.farcasterWallet);
-        return window.farcasterWallet;
-    }
-    
-    // 3. window.farcaster?.solana
-    if (window.farcaster?.solana) {
-        console.log("Found window.farcaster.solana:", window.farcaster.solana);
-        return window.farcaster.solana;
-    }
-    
-    return null;
 },
             
             // YENİ FONKSİYON: Disconnect
@@ -894,59 +822,24 @@ findInjectedProviderForFrame() {
         document.addEventListener('DOMContentLoaded', () => window.app.init());
 
         // Debug için global erişim
-// Debug için global erişim
 window.debugApp = {
     getState: () => state,
     getWalletManager: () => WalletManager,
     getAdapters: () => WalletManager.adapters,
     checkFarcaster: () => {
-        console.log("=== FARCASTER ENVIRONMENT CHECK ===");
-        console.log("1. window.solana:", window.solana);
-        console.log("2. window.solana.connect:", typeof window.solana?.connect);
-        console.log("3. window.solana.request:", typeof window.solana?.request);
-        console.log("4. window.solana.publicKey:", window.solana?.publicKey?.toString());
-        console.log("5. window.farcasterWallet:", window.farcasterWallet);
-        console.log("6. window.farcaster:", window.farcaster);
-        console.log("7. Adapters count:", WalletManager.adapters.length);
-        console.log("8. Adapters:", WalletManager.adapters.map(a => a.name));
-        console.log("9. State env:", state.env);
-        console.log("=== END CHECK ===");
+        console.log("Checking Farcaster environment...");
+        console.log("window.solana:", window.solana);
+        console.log("window.farcasterWallet:", window.farcasterWallet);
+        console.log("window.farcaster:", window.farcaster);
+        console.log("sdk.wallet:", sdk.wallet);
+        console.log("Adapters:", WalletManager.adapters);
+        console.log("State env:", state.env);
     },
-    testConnect: async () => {
-        console.log("Testing Farcaster connection...");
-        
-        // 1. window.solana üzerinden dene
-        if (window.solana) {
-            console.log("Attempting connection via window.solana...");
-            try {
-                if (window.solana.connect) {
-                    const resp = await window.solana.connect();
-                    console.log("Success! PublicKey:", resp.publicKey.toString());
-                    return resp.publicKey;
-                } else if (window.solana.request) {
-                    const resp = await window.solana.request({ method: 'connect' });
-                    console.log("Success! PublicKey:", resp.publicKey.toString());
-                    return resp.publicKey;
-                }
-            } catch (e) {
-                console.error("Connection failed:", e);
-            }
+    forceConnect: async () => {
+        const provider = WalletManager.findInjectedProvider();
+        if (provider) {
+            return app.performConnect(provider);
         }
-        
-        // 2. Adapter üzerinden dene
-        if (WalletManager.adapters.length > 0) {
-            console.log("Attempting connection via adapter...");
-            const adapter = WalletManager.adapters[0];
-            try {
-                await adapter.features['standard:connect'].connect();
-                console.log("Success! Address:", adapter.accounts[0].address);
-                return new PublicKey(adapter.accounts[0].address);
-            } catch (e) {
-                console.error("Adapter connection failed:", e);
-            }
-        }
-        
-        console.error("All connection attempts failed");
         return null;
     }
 };
