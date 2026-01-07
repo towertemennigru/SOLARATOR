@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Solarator Pro - Advanced Incinerator</title>
+    <title>Solarator - Spam Disposal</title>
     
-    <meta property="fc:frame" content='{"version": "next", "imageUrl": "https://placehold.co/600x400/101010/ff4500?text=Solarator+Pro", "button": {"title": "Launch Pro App", "action": {"type": "launch_frame", "name": "Solarator Pro", "url": "https://solarator-pro.vercel.app", "splashImageUrl": "https://placehold.co/200x200/101010/ff4500?text=Loading...", "splashBackgroundColor": "#0f0f0f"}}}' />
+    <meta property="fc:frame" content='{"version": "next", "imageUrl": "https://placehold.co/600x400/101010/ff4500?text=Spam+Disposal", "button": {"title": "Check Junk", "action": {"type": "launch_frame", "name": "Solarator", "url": "https://solarator-pro.vercel.app", "splashImageUrl": "https://placehold.co/200x200/101010/ff4500?text=Loading...", "splashBackgroundColor": "#0f0f0f"}}}' />
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
@@ -19,86 +19,46 @@
             --primary-glow: rgba(255, 59, 48, 0.4);
             --bg-dark: #050505;
             --surface: #111111;
-            --surface-border: #222222;
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
             color: #ffffff;
-            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Glassmorphism & Effects */
         .glass-card {
-            background: rgba(17, 17, 17, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: rgba(17, 17, 17, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
         }
 
-        .neon-text { text-shadow: 0 0 10px var(--primary-glow); }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-
-        /* Animations */
         .animate-enter { animation: enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(10px); }
         @keyframes enter { to { opacity: 1; transform: translateY(0); } }
 
         .loader-ring {
-            display: inline-block; width: 20px; height: 20px;
+            width: 20px; height: 20px;
             border: 2px solid rgba(255,255,255,0.1);
             border-radius: 50%;
             border-top-color: var(--primary);
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-
-        /* Modal Transitions */
-        .modal-backdrop {
-            background: rgba(0,0,0,0.8);
-            opacity: 0; pointer-events: none;
-            transition: opacity 0.2s ease;
-        }
-        .modal-backdrop.active { opacity: 1; pointer-events: all; }
         
-        .modal-panel {
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .modal-backdrop.active.modal-panel { transform: translateY(0); }
-
-        /* Toggle Switch */
-        .toggle-checkbox:checked { right: 0; border-color: #10b981; }
-        .toggle-checkbox:checked +.toggle-label { background-color: #10b981; }
+        input:focus { outline: none; border-color: #ff4500; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col pb-24">
 
-    <div class="fixed inset-0 z-[-1]" style="background-image: radial-gradient(#222 1px, transparent 1px); background-size: 32px 32px; opacity: 0.3;"></div>
-    <div class="fixed top-0 left-0 w-full h-64 bg-gradient-to-b from-orange-900/10 to-transparent pointer-events-none"></div>
-
     <header class="sticky top-0 z-40 glass-card border-b-0 border-b-white/5 rounded-b-2xl mx-2 mt-2 px-4 py-3 flex justify-between items-center">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
-                <i class="fa-solid fa-fire-burner text-white text-xs"></i>
+                <i class="fa-solid fa-trash-can text-white text-xs"></i>
             </div>
             <div>
-                <h1 class="font-bold text-sm tracking-wide">SOLARATOR <span class="text-[10px] text-orange-500 bg-orange-500/10 px-1 rounded ml-1">PRO</span></h1>
+                <h1 class="font-bold text-sm tracking-wide">SOLARATOR <span class="text-[10px] text-orange-500 bg-orange-500/10 px-1 rounded ml-1">MANUAL</span></h1>
             </div>
-        </div>
-        <div id="connection-badge" class="hidden flex items-center gap-2 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-md">
-            <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-            <span id="wallet-short" class="text-[10px] font-mono text-green-400"></span>
-            <button onclick="app.disconnect()" class="ml-2 text-gray-500 hover:text-red-500 transition-colors" title="Disconnect">
-                <i class="fa-solid fa-power-off text-xs"></i>
-            </button>
         </div>
     </header>
 
@@ -106,407 +66,68 @@
 
         <div id="notification-area" class="fixed top-20 left-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-        <section id="view-connect" class="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-enter">
+        <section id="view-input" class="flex flex-col items-center justify-center min-h-[50vh] space-y-8 animate-enter">
             <div class="text-center space-y-2">
                 <h2 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
-                    Incinerate Junk.
-                    <br>
-                    <span class="text-orange-500">Reclaim SOL.</span>
+                    Purge Your Junk.
                 </h2>
                 <p class="text-gray-500 text-xs max-w-[280px] mx-auto leading-relaxed">
-                    Safely identify empty token accounts, burn them in batches, and recover your rent deposits instantly.
+                    Enter your Solana address to find spam tokens. Send them to our Incinerator Bot to reclaim rent.
                 </p>
             </div>
 
             <div class="w-full space-y-4">
-                <div id="env-loader" class="flex justify-center mb-4">
-                    <div class="flex items-center gap-2 text-xs text-gray-600 font-mono bg-black/40 px-3 py-1 rounded-full">
-                        <i class="fa-solid fa-satellite-dish animate-pulse"></i>
-                        <span id="env-status-text">Detecting Environment...</span>
+                <div class="relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                    <div class="relative flex items-center bg-[#111] rounded-xl border border-white/10 p-1">
+                        <div class="pl-4 text-gray-500"><i class="fa-solid fa-magnifying-glass"></i></div>
+                        <input type="text" id="wallet-input" placeholder="Paste Solana Address..." class="w-full bg-transparent text-white px-4 py-3 text-sm font-mono placeholder-gray-600">
                     </div>
                 </div>
 
-                <button id="btn-connect-main" onclick="app.connect()" class="w-full py-4 bg-white text-black font-bold rounded-xl shadow-xl shadow-white/5 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 relative overflow-hidden group">
-                    <div class="absolute inset-0 bg-gradient-to-r from-orange-200 to-transparent opacity-0 group-hover:opacity-30 transition-opacity"></div>
-                    <i class="fa-solid fa-wallet"></i>
-                    <span id="btn-connect-text">Connect Wallet</span>
+                <button onclick="app.scanInput()" id="btn-scan" class="w-full py-4 bg-white text-black font-bold rounded-xl shadow-xl shadow-white/5 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+                    <span>Scan for Junk</span>
+                    <i class="fa-solid fa-arrow-right"></i>
                 </button>
-                
-                <p class="text-[10px] text-center text-gray-600">
-                    Supported: Phantom, Solflare, Backpack, & Frame Injection
-                </p>
             </div>
         </section>
 
         <section id="view-dashboard" class="hidden flex-col gap-5 animate-enter">
             
-            <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-orange-600/10 blur-[40px] rounded-full pointer-events-none"></div>
-                
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">Potential Refund</p>
-                        <div class="flex items-baseline gap-1">
-                            <span id="stat-refund" class="text-4xl font-black text-white tracking-tighter">0.00</span>
-                            <span class="text-sm font-bold text-orange-500">SOL</span>
-                        </div>
-                    </div>
-                    <button onclick="app.scanner.scan()" id="btn-refresh" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition border border-white/5">
-                        <i class="fa-solid fa-rotate text-gray-400"></i>
-                    </button>
+            <div class="glass-card p-5 rounded-2xl relative overflow-hidden border-orange-500/20">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Incinerator Address</h3>
+                <div class="flex items-center justify-between bg-black/40 rounded-lg p-3 border border-white/5">
+                    <span class="font-mono text-xs text-orange-400 truncate mr-2" id="bot-address-display">LOADING...</span>
+                    <button onclick="app.copyBotAddress()" class="text-gray-400 hover:text-white"><i class="fa-regular fa-copy"></i></button>
                 </div>
-
-                <div class="mt-4 pt-4 border-t border-white/5 flex gap-4">
-                    <div class="flex-1">
-                        <p class="text-[10px] text-gray-500">Scanned</p>
-                        <p id="stat-scanned" class="font-mono text-sm">0</p>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-[10px] text-gray-500">Empty</p>
-                        <p id="stat-empty" class="font-mono text-sm text-orange-400">0</p>
-                    </div>
-                </div>
+                <p class="text-[10px] text-gray-500 mt-2">
+                    <i class="fa-solid fa-circle-info mr-1"></i> 
+                    Send selected tokens to this address using your wallet (Phantom/Solflare). The bot will burn them and refund rent.
+                </p>
             </div>
 
             <div class="flex items-center justify-between px-1">
-                <h3 class="text-sm font-bold text-gray-300">Target Accounts</h3>
-                <div class="flex items-center gap-3">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <span class="text-[10px] text-gray-500">Select All</span>
-                        <div class="relative inline-block w-8 h-4 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" id="toggle-select-all" onclick="app.ui.toggleSelectAll()" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-800 transition-all duration-300"/>
-                            <label for="toggle-select-all" class="toggle-label block overflow-hidden h-4 rounded-full bg-gray-800 cursor-pointer"></label>
-                        </div>
-                    </label>
-                </div>
+                <h3 class="text-sm font-bold text-gray-300">Potential Junk</h3>
+                <span id="scan-status" class="text-[10px] text-gray-500">Ready</span>
             </div>
 
-            <div id="account-list" class="flex flex-col gap-2 pb-32 min-h-[200px]">
-                <div class="flex flex-col items-center justify-center py-10 text-gray-600 opacity-50">
-                    <i class="fa-solid fa-box-open text-2xl mb-2"></i>
-                    <p class="text-xs">Waiting for scan...</p>
+            <div id="account-list" class="flex flex-col gap-2 pb-32">
                 </div>
-            </div>
 
         </section>
 
-        <div id="fab-container" class="fixed bottom-6 left-4 right-4 z-30 translate-y-32 transition-transform duration-300">
-            <div class="glass-card p-4 rounded-2xl border-t border-orange-500/20 shadow-[0_0_40px_rgba(255,69,0,0.1)]">
-                <div class="flex justify-between items-center mb-3 text-xs px-1">
-                    <span class="text-gray-400">Priority Fee:</span>
-                    <select id="priority-fee" class="bg-black/50 border border-white/10 rounded px-2 py-1 text-gray-300 outline-none">
-                        <option value="1000">Low (Default)</option>
-                        <option value="50000" selected>Medium (Fast)</option>
-                        <option value="500000">Turbo (Instant)</option>
-                    </select>
-                </div>
-                <button id="btn-burn" onclick="app.burner.executeBurn()" disabled class="w-full py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white font-black text-lg rounded-xl shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale transition-all active:scale-[0.98]">
-                    <i class="fa-solid fa-fire"></i>
-                    <span>BURN <span id="selected-count">0</span> ACCOUNTS</span>
-                </button>
-            </div>
-        </div>
-
     </main>
 
-    <div id="modal-wallet" class="modal-backdrop fixed inset-0 z- flex items-end sm:items-center justify-center p-4">
-        <div class="modal-panel w-full max-w-sm bg-[#111] border border-white/10 rounded-2xl p-6 shadow-2xl relative">
-            <button onclick="app.ui.toggleModal(false)" class="absolute top-4 right-4 text-gray-500 hover:text-white"><i class="fa-solid fa-xmark fa-lg"></i></button>
-            <h3 class="text-lg font-bold mb-6 text-center">Select Wallet</h3>
-            <div id="wallet-list" class="flex flex-col gap-3"></div>
-        </div>
-    </div>
-
-    <script type="module">
-        import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.22';
-        
-        const { 
-            Connection, 
-            PublicKey, 
-            Transaction, 
-            TransactionInstruction,
-            SystemProgram,
-            ComputeBudgetProgram 
-        } = window.solanaWeb3;
-
+    <script>
         // --- CONSTANTS ---
+        // RPC: Helius public or your private one
         const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=60ab6dbf-aa02-4ff8-9e12-b26abdcd40cc";
-        const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-        const SOL_RENT_RETURN = 0.002039; 
-        const MAX_BATCH_SIZE = 20;
-
-        // --- STATE MANAGEMENT ---
-        const state = {
-            env: 'unknown', 
-            wallet: null,   
-            publicKey: null,
-            accounts: [],   
-            selected: new Set(),
-            isScanning: false,
-            isBurning: false
-        };
-
-       const EnvManager = {
-    async init() {
-        const statusEl = document.getElementById('env-status-text');
+        const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
         
-        try {
-            await sdk.actions.ready();
-            const context = await sdk.context; 
-            
-            if (context && context.user) {
-                state.env = 'frame';
-                statusEl.innerText = `Frame Mode (FID: ${context.user.fid})`;
-                document.body.classList.add('frame-mode');
-                
-                // Farcaster Wallet'ı bulmak için özel bir yaklaşım
-                setTimeout(() => {
-                    this.detectFarcasterWallet();
-                }, 1000);
-                
-                return;
-            }
-        } catch (e) {
-            console.log("Not in Frame context:", e);
-        }
+        // SENİN BOT ADRESİNİ BURAYA YAZACAKSIN:
+        const INCINERATOR_BOT_ADDRESS = "So11111111111111111111111111111111111111112"; // <-- BURAYI GÜNCELLE
 
-        state.env = 'browser';
-        statusEl.innerText = "Browser Mode";
-    },
-    
-    async detectFarcasterWallet() {
-        // 1. Standart wallet'ları kontrol et
-        if (WalletManager.adapters.length > 0) {
-            console.log("Found adapters:", WalletManager.adapters.map(a => a.name));
-            return;
-        }
-        
-        // 2. Farcaster'ın özel provider'ını kontrol et
-        if (window.farcasterWallet || window.farcaster?.solana) {
-            console.log("Found Farcaster wallet via window object");
-            return;
-        }
-        
-        // 3. Frame SDK'nın kendi provider'ını kontrol et
-        try {
-            if (sdk.wallet) {
-                console.log("Found wallet via Frame SDK");
-                return;
-            }
-        } catch (e) {}
-        
-        console.warn("No wallet found in Frame mode");
-    }
-};
-
-        // --- 2. WALLET MANAGER (Güncellendi) ---
-const WalletManager = {
-    adapters: [],
-    farcasterProvider: null,
-
-    initListeners() {
-        const onRegister = (event) => {
-            const { register } = event.detail;
-            register({
-                register: (adapter) => {
-                    console.log("Wallet registering:", adapter.name);
-                    
-                    // Frame modunda TÜM cüzdanları kabul et (filtrelemeyi kaldır)
-                    // Farcaster Wallet genellikle "Farcaster Wallet" olarak gelir
-                    if (!this.adapters.find(a => a.name === adapter.name)) {
-                        this.adapters.push(adapter);
-                        console.log("✅ Wallet Registered:", adapter.name);
-                        
-                        // Frame modunda ve Farcaster Wallet bulunursa
-                        if (state.env === 'frame' && adapter.name.includes('Farcaster')) {
-                            console.log("🎯 Farcaster Wallet detected!");
-                            // Otomatik bağlanmayı deneyebiliriz
-                            // setTimeout(() => app.performConnect(adapter.name), 500);
-                        }
-                    }
-                }
-            });
-        };
-        
-        window.addEventListener('wallet-standard:register-wallet', onRegister);
-        
-        // Farcaster'ın özel provider'ını da dinle
-        this.setupFarcasterListener();
-        
-        try {
-            const event = new CustomEvent('wallet-standard:app-ready');
-            window.dispatchEvent(event);
-        } catch(e) {}
-    },
-    
-    setupFarcasterListener() {
-        // Farcaster'ın kendi wallet provider'ını dinle
-        if (state.env === 'frame') {
-            const interval = setInterval(() => {
-                // 1. window.solana'yı kontrol et
-                if (window.solana && window.solana.connect && !this.farcasterProvider) {
-                    console.log("Found window.solana in Frame");
-                    this.farcasterProvider = window.solana;
-                    clearInterval(interval);
-                }
-                
-                // 2. Farcaster'ın özel nesnesini kontrol et
-                if (window.farcasterWallet && !this.farcasterProvider) {
-                    console.log("Found Farcaster Wallet via window.farcasterWallet");
-                    this.farcasterProvider = window.farcasterWallet;
-                    clearInterval(interval);
-                }
-                
-                // 3. Frame SDK'nın wallet'ını kontrol et
-                if (sdk.wallet && !this.farcasterProvider) {
-                    console.log("Found wallet via Frame SDK wallet property");
-                    this.farcasterProvider = sdk.wallet;
-                    clearInterval(interval);
-                }
-            }, 500);
-            
-            // 10 saniye sonra timeout
-            setTimeout(() => clearInterval(interval), 10000);
-        }
-    },
-
-    findInjectedProvider() {
-        // Frame modunda tüm olasılıkları kontrol et
-        if (state.env === 'frame') {
-            if (this.farcasterProvider) return this.farcasterProvider;
-            if (window.farcasterWallet) return window.farcasterWallet;
-            if (window.farcaster?.solana) return window.farcaster.solana;
-            if (sdk.wallet) return sdk.wallet;
-            
-            // Farcaster'ın window.solana'ya inject ettiğini kontrol et
-            if (window.solana && window.solana.connect) {
-                // Phantom/Solflare değilse (Frame'de olmaz ama kontrol edelim)
-                if (!window.solana.isPhantom && !window.solana.isSolflare) {
-                    return window.solana;
-                }
-            }
-            
-            return null;
-        }
-
-        // Browser modu için normal kontrol
-        if ('phantom' in window && window.phantom.solana) return window.phantom.solana;
-        if ('solflare' in window) return window.solflare;
-        if ('solana' in window) return window.solana;
-        return null;
-    },
-
-    async connect(adapterNameOrProvider) {
-        try {
-            // Frame modunda ve doğrudan provider verilmişse
-            if (state.env === 'frame' && typeof adapterNameOrProvider === 'object') {
-                const provider = adapterNameOrProvider;
-                const resp = await provider.connect();
-                state.publicKey = resp.publicKey;
-                state.wallet = provider;
-                return state.publicKey;
-            }
-            
-            // Standart wallet adaptörü ile
-            if (typeof adapterNameOrProvider === 'string') {
-                const adapter = this.adapters.find(a => a.name === adapterNameOrProvider);
-                if (adapter) {
-                    await adapter.features['standard:connect'].connect();
-                    state.publicKey = new PublicKey(adapter.accounts[0].address);
-                    state.wallet = {
-                        isStandard: true,
-                        adapter: adapter,
-                        signAllTransactions: async (txs) => {
-                            // Farcaster Wallet için özel işleme
-                            if (adapter.name.includes('Farcaster')) {
-                                return await Promise.all(txs.map(tx => adapter.signTransaction(tx)));
-                            }
-                            return adapter.signAllTransactions(txs);
-                        }
-                    };
-                    return state.publicKey;
-                }
-            }
-
-            // Fallback: injected provider
-            const provider = this.findInjectedProvider();
-            if (!provider) {
-                throw new Error("No wallet found. Make sure you're using a Farcaster client with Solana support.");
-            }
-
-            const resp = await provider.connect();
-            state.publicKey = resp.publicKey;
-            state.wallet = provider;
-            return state.publicKey;
-
-        } catch (e) {
-            console.error("Connect error:", e);
-            throw e;
-        }
-    }
-};
-
-        // --- 3. SCANNER & BURNER SERVICE ---
-        const SolanaService = {
-            conn: new Connection(RPC_URL, 'confirmed'),
-
-            async scanAccounts(pubKey) {
-                const accounts = await this.conn.getParsedTokenAccountsByOwner(pubKey, {
-                    programId: TOKEN_PROGRAM_ID
-                });
-
-                return accounts.value
-                    .filter(acc => acc.account.data.parsed.info.tokenAmount.uiAmount === 0)
-                    .map(acc => ({
-                        pubkey: acc.pubkey,
-                        mint: acc.account.data.parsed.info.mint,
-                        decimals: acc.account.data.parsed.info.tokenAmount.decimals
-                    }));
-            },
-
-            async buildBurnTransactions(accounts, priorityFeeMicroLamports) {
-                const txs = [];
-                const { blockhash } = await this.conn.getLatestBlockhash();
-
-                for (let i = 0; i < accounts.length; i += MAX_BATCH_SIZE) {
-                    const batch = accounts.slice(i, i + MAX_BATCH_SIZE);
-                    const tx = new Transaction();
-                    
-                    tx.recentBlockhash = blockhash;
-                    tx.feePayer = state.publicKey;
-
-                    if (priorityFeeMicroLamports > 0) {
-                        tx.add(ComputeBudgetProgram.setComputeUnitPrice({
-                            microLamports: parseInt(priorityFeeMicroLamports)
-                        }));
-                    }
-
-                    batch.forEach(acc => {
-                        tx.add(new TransactionInstruction({
-                            keys: [
-                                { pubkey: acc.pubkey, isSigner: false, isWritable: true },
-                                { pubkey: state.publicKey, isSigner: true, isWritable: true },
-                                { pubkey: state.publicKey, isSigner: false, isWritable: false } 
-                            ],
-                            programId: TOKEN_PROGRAM_ID,
-                            data: Uint8Array.of(9) // CloseAccount Instruction ID
-                        }));
-                    });
-
-                    txs.push(tx);
-                }
-                return txs;
-            }
-        };
-
-        // --- 4. UI CONTROLLER ---
         const UI = {
-            toggleModal(show) {
-                const el = document.getElementById('modal-wallet');
-                if (show) el.classList.add('active');
-                else el.classList.remove('active');
-            },
-
             showToast(msg, type = 'info') {
                 const container = document.getElementById('notification-area');
                 const div = document.createElement('div');
@@ -516,91 +137,9 @@ const WalletManager = {
                 container.appendChild(div);
                 setTimeout(() => div.remove(), 4000);
             },
-
-            renderAccounts(accounts) {
-                const list = document.getElementById('account-list');
-                const statScanned = document.getElementById('stat-scanned');
-                const statEmpty = document.getElementById('stat-empty');
-                
-                statScanned.innerText = accounts.length * 2 + Math.floor(Math.random() * 10); 
-                statEmpty.innerText = accounts.length;
-                list.innerHTML = "";
-
-                if (accounts.length === 0) {
-                    list.innerHTML = `<div class="text-center py-8 text-gray-500 text-xs">No empty accounts found! Clean wallet.</div>`;
-                    return;
-                }
-
-                accounts.forEach((acc, idx) => {
-                    const el = document.createElement('div');
-                    el.className = "glass-card p-3 rounded-xl flex items-center justify-between group cursor-pointer hover:bg-white/5 transition";
-                    el.onclick = (e) => {
-                        if(e.target.tagName === 'A') return;
-                        app.ui.toggleSelection(idx);
-                    };
-                    
-                    const isSelected = state.selected.has(idx);
-                    
-                    el.innerHTML = `
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <div class="w-5 h-5 rounded border ${isSelected ? 'bg-orange-500 border-orange-500' : 'border-gray-600'} flex items-center justify-center transition-colors">
-                                ${isSelected ? '<i class="fa-solid fa-check text-black text-[10px]"></i>' : ''}
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="font-mono text-[10px] text-gray-400 truncate w-32">${acc.pubkey.toString()}</span>
-                                <div class="flex items-center gap-1">
-                                    <span class="text-[9px] text-gray-600">Mint: ${acc.mint.slice(0,4)}...${acc.mint.slice(-4)}</span>
-                                    <a href="https://solscan.io/account/${acc.pubkey.toString()}" target="_blank" class="text-[9px] text-orange-500 hover:underline"><i class="fa-solid fa-external-link-alt"></i></a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-xs font-bold text-green-400">+${SOL_RENT_RETURN}</span>
-                        </div>
-                    `;
-                    list.appendChild(el);
-                });
-            },
-
-            toggleSelection(idx) {
-                if (state.selected.has(idx)) state.selected.delete(idx);
-                else state.selected.add(idx);
-                this.updateBurnUI();
-                this.renderAccounts(state.accounts);
-            },
-
-            toggleSelectAll() {
-                const checkbox = document.getElementById('toggle-select-all');
-                if (checkbox.checked) {
-                    state.accounts.forEach((_, i) => state.selected.add(i));
-                } else {
-                    state.selected.clear();
-                }
-                this.updateBurnUI();
-                this.renderAccounts(state.accounts);
-            },
-
-            updateBurnUI() {
-                const count = state.selected.size;
-                const total = (count * SOL_RENT_RETURN).toFixed(4);
-                
-                document.getElementById('stat-refund').innerText = total;
-                document.getElementById('selected-count').innerText = count;
-                
-                const fab = document.getElementById('fab-container');
-                const btn = document.getElementById('btn-burn');
-                
-                if (count > 0) {
-                    fab.classList.remove('translate-y-32');
-                    btn.disabled = false;
-                } else {
-                    fab.classList.add('translate-y-32');
-                    btn.disabled = true;
-                }
-            },
-
+            
             switchView(view) {
-                document.getElementById('view-connect').classList.add('hidden');
+                document.getElementById('view-input').classList.add('hidden');
                 document.getElementById('view-dashboard').classList.add('hidden');
                 document.getElementById('view-dashboard').classList.remove('flex');
                 
@@ -608,242 +147,108 @@ const WalletManager = {
                     const db = document.getElementById('view-dashboard');
                     db.classList.remove('hidden');
                     db.classList.add('flex');
-                    document.getElementById('connection-badge').classList.remove('hidden');
                 } else {
-                    document.getElementById('view-connect').classList.remove('hidden');
-                    document.getElementById('connection-badge').classList.add('hidden');
+                    document.getElementById('view-input').classList.remove('hidden');
                 }
-            }
-        };
-
-        // --- 5. MAIN APP CONTROLLER ---
-        window.app = {
-            init() {
-                WalletManager.initListeners();
-                EnvManager.init();
             },
 
-            async connect() {
-    // --- SENARYO 1: FRAME MODU ---
-    if (state.env === 'frame') {
-        UI.showToast("Looking for Farcaster Wallet...", "info");
-        
-        // 1. Önce Standart Wallet adaptörlerini kontrol et
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Biraz bekle
-        
-        if (WalletManager.adapters.length > 0) {
-            // Frame'de genellikle sadece bir wallet olur (Farcaster Wallet)
-            const frameWallet = WalletManager.adapters[0];
-            console.log("Using frame wallet:", frameWallet?.name);
-            return this.performConnect(frameWallet?.name || "Farcaster Wallet");
-        }
-        
-        // 2. Injected provider'ı kontrol et
-        const injected = WalletManager.findInjectedProvider();
-        if (injected) {
-            console.log("Using injected provider:", injected);
-            return this.performConnect(injected);
-        }
-        
-        // 3. Frame SDK üzerinden wallet'ı kontrol et
-        try {
-            if (sdk.wallet) {
-                console.log("Using SDK wallet");
-                return this.performConnect(sdk.wallet);
-            }
-        } catch (e) {}
-        
-        // 4. Hiçbiri yoksa kullanıcıya yardımcı mesaj göster
-        UI.showToast(
-            "Farcaster Wallet not found. Try:\n" +
-            "1. Refresh the frame\n" +
-            "2. Update your Farcaster client\n" +
-            "3. Use Warpcast with Solana support", 
-            "error"
-        );
-        return;
-    }
-
-    // --- SENARYO 2: BROWSER MODU ---
-    this.populateModal();
-    UI.toggleModal(true);
-},
-            
-            // YENİ FONKSİYON: Disconnect
-            disconnect() {
-                if (state.wallet && state.wallet.disconnect) {
-                    try {
-                        state.wallet.disconnect();
-                    } catch (e) {
-                        console.log("Disconnect error", e);
-                    }
-                }
-                // State temizle
-                state.wallet = null;
-                state.publicKey = null;
-                state.accounts = [];
-                state.selected.clear();
-                
-                UI.showToast("Wallet Disconnected");
-                UI.switchView('connect');
-            },
-
-            populateModal() {
-                const list = document.getElementById('wallet-list');
+            renderAccounts(accounts) {
+                const list = document.getElementById('account-list');
                 list.innerHTML = "";
-                
-                const detectedWallets = [...WalletManager.adapters];
-                const legacyProvider = WalletManager.findInjectedProvider();
 
-                if (legacyProvider) {
-                     if(!detectedWallets.some(w => w.name.toLowerCase().includes('phantom') || w.name.toLowerCase().includes('solflare'))) {
-                        detectedWallets.push({
-                            name: "Browser Wallet (Detected)",
-                            icon: "fa-wallet",
-                            provider: legacyProvider
-                        });
-                     }
+                if (accounts.length === 0) {
+                    list.innerHTML = `<div class="text-center py-8 text-gray-500 text-xs">No spam tokens found with balance > 0.</div>`;
+                    return;
                 }
 
-                if (detectedWallets.length === 0) {
-                    detectedWallets.push({
-                        name: "Phantom / Solflare",
-                        icon: "fa-ghost",
-                        provider: legacyProvider 
-                    });
-                }
-
-                detectedWallets.forEach(w => {
-                    const btn = document.createElement('button');
-                    btn.className = "w-full p-4 bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-3 transition text-left mb-2";
-                    let iconClass = w.icon || 'fa-star';
-                    if (w.name.toLowerCase().includes('phantom')) iconClass = 'fa-ghost';
-
-                    btn.innerHTML = `
-                        <div class="w-8 h-8 bg-black rounded-full flex items-center justify-center border border-white/10">
-                            <i class="fa-solid ${iconClass} text-white"></i>
+                accounts.forEach((acc) => {
+                    const el = document.createElement('div');
+                    el.className = "glass-card p-3 rounded-xl flex items-center justify-between";
+                    
+                    // Basit bir "Junk" tespiti simülasyonu (Gerçekte Token List API kullanılabilir)
+                    const isKnownScam = Math.random() > 0.7; // Fake detection visual
+                    
+                    el.innerHTML = `
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-500">
+                                ?
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="font-bold text-xs text-gray-300 truncate w-32">Unknown Token</span>
+                                <div class="flex items-center gap-1">
+                                    <span class="font-mono text-[9px] text-gray-500">${acc.mint.slice(0,4)}...${acc.mint.slice(-4)}</span>
+                                    <span class="text-[9px] text-gray-600 bg-gray-800 px-1 rounded">Qty: ${acc.amount}</span>
+                                </div>
+                            </div>
                         </div>
-                        <span class="font-bold text-sm">${w.name}</span>
+                        <div class="text-right">
+                           <a href="https://solscan.io/token/${acc.mint}" target="_blank" class="text-xs text-orange-500 hover:text-orange-400">View <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>
+                        </div>
                     `;
-                    btn.onclick = () => {
-                        UI.toggleModal(false);
-                        this.performConnect(w.provider || w.name);
-                    };
-                    list.appendChild(btn);
+                    list.appendChild(el);
                 });
-            },
-
-            async performConnect(target) {
-                try {
-                    const pubKey = await WalletManager.connect(target);
-                    const short = pubKey.toString().slice(0,4) + '...' + pubKey.toString().slice(-4);
-                    document.getElementById('wallet-short').innerText = short;
-                    UI.showToast("Wallet Connected!", "success");
-                    UI.switchView('dashboard');
-                    this.scanner.scan();
-                } catch (e) {
-                    UI.showToast(e.message || "Connection Failed", "error");
-                }
-            },
-
-            scanner: {
-                async scan() {
-                    if (!state.publicKey) return;
-                    const list = document.getElementById('account-list');
-                    list.innerHTML = `<div class="flex justify-center py-10"><div class="loader-ring"></div></div>`;
-                    
-                    try {
-                        const accounts = await SolanaService.scanAccounts(state.publicKey);
-                        state.accounts = accounts;
-                        state.selected.clear();
-                        UI.renderAccounts(accounts);
-                        UI.updateBurnUI();
-                        
-                        if (accounts.length > 0) {
-                            UI.showToast(`Found ${accounts.length} accounts`, "success");
-                        }
-                    } catch (e) {
-                        list.innerHTML = `<div class="text-red-500 text-center text-xs p-4">${e.message}</div>`;
-                    }
-                }
-            },
-
-            burner: {
-                async executeBurn() {
-                    const btn = document.getElementById('btn-burn');
-                    const originalHTML = btn.innerHTML;
-                    
-                    try {
-                        const targets = Array.from(state.selected).map(i => state.accounts[i]);
-                        if (targets.length === 0) return;
-
-                        btn.disabled = true;
-                        btn.innerHTML = `<div class="loader-ring border-white"></div> Processing...`;
-
-                        const fee = document.getElementById('priority-fee').value;
-                        const txs = await SolanaService.buildBurnTransactions(targets, fee);
-
-                        UI.showToast(`Requesting signature for ${txs.length} transactions...`);
-
-                        let signedTxs;
-                        if (state.wallet.signAllTransactions) {
-                            signedTxs = await state.wallet.signAllTransactions(txs);
-                        } else {
-                            throw new Error("Wallet does not support batch signing.");
-                        }
-
-                        let successCount = 0;
-                        for (const signedTx of signedTxs) {
-                            const raw = signedTx.serialize();
-                            await SolanaService.conn.sendRawTransaction(raw, { skipPreflight: true });
-                            successCount++;
-                        }
-
-                        UI.showToast(`Broadcasted ${successCount} transactions!`, "success");
-                        
-                        setTimeout(() => {
-                            app.scanner.scan();
-                            btn.innerHTML = originalHTML;
-                            btn.disabled = false;
-                        }, 2000);
-
-                    } catch (e) {
-                        console.error(e);
-                        UI.showToast("Burn Failed: " + e.message, "error");
-                        btn.innerHTML = originalHTML;
-                        btn.disabled = false;
-                    }
-                }
-            },
-
-            ui: UI
+            }
         };
 
-        document.addEventListener('DOMContentLoaded', () => window.app.init());
+        const app = {
+            conn: new solanaWeb3.Connection(RPC_URL, 'confirmed'),
 
-        // Debug için global erişim
-window.debugApp = {
-    getState: () => state,
-    getWalletManager: () => WalletManager,
-    getAdapters: () => WalletManager.adapters,
-    checkFarcaster: () => {
-        console.log("Checking Farcaster environment...");
-        console.log("window.solana:", window.solana);
-        console.log("window.farcasterWallet:", window.farcasterWallet);
-        console.log("window.farcaster:", window.farcaster);
-        console.log("sdk.wallet:", sdk.wallet);
-        console.log("Adapters:", WalletManager.adapters);
-        console.log("State env:", state.env);
-    },
-    forceConnect: async () => {
-        const provider = WalletManager.findInjectedProvider();
-        if (provider) {
-            return app.performConnect(provider);
-        }
-        return null;
-    }
-};
-    
+            init() {
+                document.getElementById('bot-address-display').innerText = INCINERATOR_BOT_ADDRESS;
+            },
+
+            async scanInput() {
+                const input = document.getElementById('wallet-input').value.trim();
+                const btn = document.getElementById('btn-scan');
+                
+                if (!input) {
+                    UI.showToast("Please enter a valid address", "error");
+                    return;
+                }
+
+                try {
+                    const pubKey = new solanaWeb3.PublicKey(input);
+                    
+                    btn.innerHTML = `<div class="loader-ring"></div> Scanning...`;
+                    btn.disabled = true;
+
+                    // Fetch Token Accounts
+                    const accounts = await this.conn.getParsedTokenAccountsByOwner(pubKey, {
+                        programId: TOKEN_PROGRAM_ID
+                    });
+
+                    // FILTER: Sadece Balance > 0 olanları alıyoruz (Transfer edilebilirler)
+                    // Boş hesapları (Balance == 0) almıyoruz çünkü transfer edilemezler.
+                    const spamCandidates = accounts.value
+                        .filter(acc => acc.account.data.parsed.info.tokenAmount.uiAmount > 0) 
+                        .map(acc => ({
+                            pubkey: acc.pubkey,
+                            mint: acc.account.data.parsed.info.mint,
+                            amount: acc.account.data.parsed.info.tokenAmount.uiAmount,
+                            decimals: acc.account.data.parsed.info.tokenAmount.decimals
+                        }));
+
+                    UI.switchView('dashboard');
+                    UI.renderAccounts(spamCandidates);
+                    document.getElementById('scan-status').innerText = `Found ${spamCandidates.length} potential spam tokens`;
+
+                } catch (e) {
+                    console.error(e);
+                    UI.showToast("Invalid Address or Network Error", "error");
+                } finally {
+                    btn.innerHTML = `<span>Scan for Junk</span><i class="fa-solid fa-arrow-right"></i>`;
+                    btn.disabled = false;
+                }
+            },
+
+            copyBotAddress() {
+                navigator.clipboard.writeText(INCINERATOR_BOT_ADDRESS);
+                UI.showToast("Bot Address Copied!");
+            }
+        };
+
+        // Init
+        app.init();
     </script>
 </body>
 </html>
