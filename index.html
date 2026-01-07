@@ -9,10 +9,11 @@
     <meta property="og:title" content="Solarator" />
     <meta property="og:description" content="Burn empty token accounts, reclaim SOL" />
     <meta property="og:image" content="https://solarator-one.vercel.app/preview.jpg" />
+    <meta property="og:type" content="website" />
     
-    <!-- Farcaster Frame -->
-    <meta property="fc:frame" content="vNext" />
-    <meta property="fc:frame:image" content="https://solarator-one.vercel.app/preview.jpg" />
+    <!-- Farcaster Frame (JSON Format - Tranium Style) -->
+    <meta property="fc:frame" content='{"version": "next", "imageUrl": "https://solarator-one.vercel.app/preview.jpg", "button": {"title": "Launch Solarator", "action": {"type": "launch_frame", "name": "Solarator", "url": "https://solarator-one.vercel.app", "splashImageUrl": "https://solarator-one.vercel.app/preview.jpg", "splashBackgroundColor": "#0a0a0a"}}}' />
+    <meta name="fc:miniapp" content="hosted" />
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
