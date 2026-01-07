@@ -5,17 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solarator - Sol Incinerator</title>
     
+    <!-- Open Graph -->
     <meta property="og:title" content="Solarator" />
     <meta property="og:description" content="Burn empty token accounts, reclaim SOL" />
     <meta property="og:image" content="https://solarator-one.vercel.app/preview.jpg" />
     <meta property="og:type" content="website" />
     
+    <!-- Farcaster Frame (JSON Format) -->
     <meta property="fc:frame" content='{"version": "next", "imageUrl": "https://solarator-one.vercel.app/preview.jpg", "button": {"title": "Launch Solarator", "action": {"type": "launch_frame", "name": "Solarator", "url": "https://solarator-one.vercel.app", "splashImageUrl": "https://solarator-one.vercel.app/preview.jpg", "splashBackgroundColor": "#0a0a0a"}}}' />
     <meta name="fc:miniapp" content="hosted" />
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- FARCASTER SDK -->
+    <script type="module">
+        import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+        window.farcasterSDK = sdk;
+        window.isMiniApp = true;
+
+        const triggerReady = async () => {
+            try {
+                const context = await sdk.context;
+                if (context) {
+                    console.log("✅ Farcaster Environment Detected");
+                    document.getElementById("desktop-blocker").style.display = "none";
+                    sdk.actions.ready();
+                } else {
+                    console.warn("❌ Not in Farcaster");
+                }
+            } catch (e) {
+                console.error("SDK Init Error:", e);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', triggerReady);
+    </script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
@@ -63,6 +89,22 @@
             padding: 0;
         }
 
+        #desktop-blocker {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            color: red;
+            z-index: 99999;
+            display: none; /* KALDIRDIK */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
         .account-item {
             cursor: pointer;
             transition: all 0.2s;
@@ -96,6 +138,10 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-orange-600 selection:text-white">
 
+    <div id="desktop-blocker">
+        <h1>ONLY FOR FARCASTER</h1>
+        <p>This app can only be used through Farcaster</p>
+    </div>
 
     <header class="bg-gradient-to-r from-orange-900 via-red-900 to-black p-4 sm:p-6 rounded-b-3xl shadow-2xl shadow-orange-900/20 relative overflow-hidden">
         <div class="absolute top-0 right-0 p-4 opacity-20">
@@ -163,84 +209,123 @@
         <p>Powered by Helius RPC & Solana Web3</p>
     </footer>
 
-    <script type="module">
-        import { sdk } from 'https://esm.sh/@farcaster/frame-sdk';
+    <script>
+        // --- FARCASTER SDK INIT ---
+        let sdk = null;
+        let isInFrame = false;
 
-        // --- YAPILAN MİNİMAL DÜZELTME: Fonksiyonları Window'a Ata ---
-        // Bu sayede HTML'deki onclick="..." çalışır.
-        window.connectWallet = connectWallet;
-        window.selectAll = selectAll;
-        window.burnSelected = burnSelected;
-        window.toggleSelect = toggleSelect; // Bunu da ekledim
+        async function initFarcasterSDK() {
+            try {
+                if (window.farcasterSDK) {
+                    sdk = window.farcasterSDK;
+                    const context = await sdk.context;
+                    isInFrame = true;
+                    console.log('✅ Farcaster SDK ready');
+                }
+            } catch (err) {
+                console.log('⚠️ SDK error:', err);
+                isInFrame = false;
+            }
+        }
 
+        // --- CONFIG ---
         const HELIUS_RPC = "https://mainnet.helius-rpc.com/?api-key=60ab6dbf-aa02-4ff8-9e12-b26abdcd40cc";
         const TOKEN_PROGRAM_ID = new solanaWeb3.PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
         
+        // --- STATE ---
         let connection;
         let userPublicKey = null;
         let emptyAccounts = [];
         let selectedAccounts = new Set();
-        let isInFrame = false;
 
+        // Page Load
         window.addEventListener('load', async () => {
             connection = new solanaWeb3.Connection(HELIUS_RPC);
-            
-            try {
-                // SDK Context Kontrolü
-                const context = await sdk.context;
-                if (context) {
-                    console.log("✅ Farcaster Environment Detected");
-                    isInFrame = true;
-                    sdk.actions.ready();
-                }
+            await initFarcasterSDK();
+        });
 
+        // 1. CONNECT WALLET
         async function connectWallet() {
             const btn = document.getElementById('connect-btn');
             const status = document.getElementById('status-msg');
+
+            console.log("🔥 Connect Wallet clicked!");
 
             try {
                 btn.innerHTML = '<div class="loader"></div><span class="ml-2">Connecting...</span>';
                 btn.disabled = true;
                 status.innerText = "Opening Solana wallet...";
 
-                // Önce Farcaster Wallet, yoksa Window Solana
                 let provider = null;
-                if (isInFrame && sdk && sdk.wallet) {
-                    provider = sdk.wallet.ethProvider; 
-                } else {
+
+                // SENARYO 1: FARCASTER İÇİNDE
+                if (window.farcasterSDK && window.farcasterSDK.wallet) {
+                    console.log("📱 Trying Farcaster wallet...");
+                    try {
+                        // Farcaster'ın Solana provider'ını al
+                        const fcWallet = window.farcasterSDK.wallet;
+                        
+                        // Solana bağlantısı iste
+                        if (fcWallet.ethProvider && fcWallet.ethProvider.solana) {
+                            provider = fcWallet.ethProvider.solana;
+                            console.log("✅ Farcaster Solana provider found");
+                        } else if (fcWallet.solana) {
+                            provider = fcWallet.solana;
+                            console.log("✅ Farcaster Solana provider found (alt)");
+                        }
+                    } catch (e) {
+                        console.warn("Farcaster wallet error:", e);
+                    }
+                }
+
+                // SENARYO 2: TARAYICI (Phantom, Solflare, etc.)
+                if (!provider && window.solana) {
+                    console.log("💻 Using browser wallet (Phantom/Solflare)");
                     provider = window.solana;
                 }
 
+                // HATA: Hiçbir wallet bulunamadı
                 if (!provider) {
-                    throw new Error("No Solana wallet found. Please install Phantom or use Farcaster.");
+                    throw new Error("No Solana wallet detected. Please install Phantom, Solflare, or use Farcaster.");
                 }
 
+                console.log("🔗 Connecting to provider...");
+
+                // Wallet'ı bağla
                 const response = await provider.connect();
                 userPublicKey = response.publicKey;
 
+                console.log("✅ Connected:", userPublicKey.toString());
+
+                // UI'ı güncelle
                 document.getElementById('wallet-status').innerHTML = 
                     `<i class="fa-solid fa-link text-green-500"></i> ${userPublicKey.toString().slice(0,4)}...${userPublicKey.toString().slice(-4)}`;
                 
-                status.innerText = "Wallet connected! Scanning...";
+                status.innerText = "Wallet connected! Scanning for empty accounts...";
+
+                // Otomatik tara
                 await scanAccounts();
 
             } catch (err) {
-                console.error("Connection error:", err);
+                console.error("❌ Connection error:", err);
                 status.innerText = "Connection failed: " + err.message;
                 btn.innerHTML = '<i class="fa-solid fa-wallet"></i> Connect Wallet';
                 btn.disabled = false;
             }
         }
 
+        // 2. SCAN ACCOUNTS
         async function scanAccounts() {
             const status = document.getElementById('status-msg');
 
             try {
-                status.innerText = "Fetching token accounts...";
+                status.innerText = "Fetching token accounts from Helius...";
 
                 const accounts = await connection.getParsedTokenAccountsByOwner(userPublicKey, {
                     programId: TOKEN_PROGRAM_ID
                 });
+
+                console.log(`Found ${accounts.value.length} total token accounts`);
 
                 emptyAccounts = accounts.value.filter(acc => {
                     const amount = acc.account.data.parsed.info.tokenAmount.uiAmount;
@@ -251,15 +336,17 @@
                     rentExemptReserve: acc.account.lamports
                 }));
 
+                console.log(`Found ${emptyAccounts.length} empty accounts`);
+
                 if (emptyAccounts.length === 0) {
-                    status.innerText = "✅ No empty accounts found!";
+                    status.innerText = "✅ No empty accounts found! Your wallet is clean.";
                     document.getElementById('action-area').innerHTML = `
                         <div class="py-4 bg-green-900/20 text-green-400 rounded-xl text-center border border-green-500/20">
                             <i class="fa-solid fa-check-circle"></i> Wallet is Clean!
                         </div>
                     `;
                 } else {
-                    status.innerText = `Found ${emptyAccounts.length} empty accounts!`;
+                    status.innerText = `Found ${emptyAccounts.length} empty accounts ready to burn!`;
                     document.getElementById('account-list-container').classList.remove('hidden');
                     document.getElementById('account-list-container').classList.add('flex');
                     document.getElementById('action-area').style.display = 'none';
@@ -272,6 +359,7 @@
             }
         }
 
+        // 3. RENDER ACCOUNTS
         function renderAccounts() {
             const wrapper = document.getElementById('accounts-wrapper');
             const badge = document.getElementById('count-badge');
@@ -282,20 +370,15 @@
             emptyAccounts.forEach((acc, index) => {
                 const item = document.createElement('div');
                 item.className = "account-item flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition";
-                
-                // Onclick HTML'den çağrılacak
-                item.onclick = () => window.toggleSelect(index);
-                
-                if (selectedAccounts.has(index)) {
-                     item.classList.add('selected');
-                }
+                item.dataset.index = index;
+                item.onclick = () => toggleSelect(index);
 
                 const solReclaim = (acc.rentExemptReserve / 1e9).toFixed(6);
 
                 item.innerHTML = `
-                    <div class="flex items-center gap-3 pointer-events-none">
-                        <div class="checkbox-custom ${selectedAccounts.has(index) ? 'checked' : ''}">
-                            <i class="fa-solid fa-check text-white text-xs" style="${selectedAccounts.has(index) ? 'display:block' : 'display:none'}"></i>
+                    <div class="flex items-center gap-3">
+                        <div class="checkbox-custom">
+                            <i class="fa-solid fa-check text-white text-xs" style="display:none"></i>
                         </div>
                         <div class="flex flex-col">
                             <span class="text-[11px] text-gray-300 font-mono tracking-wide">${acc.pubkey.toString().slice(0, 16)}...</span>
@@ -306,26 +389,45 @@
                 `;
                 wrapper.appendChild(item);
             });
+        }
+
+        // 4. TOGGLE SELECT
+        function toggleSelect(index) {
+            const item = document.querySelector(`[data-index="${index}"]`);
+            const checkbox = item.querySelector('.checkbox-custom');
+            const checkIcon = checkbox.querySelector('i');
+
+            if (selectedAccounts.has(index)) {
+                selectedAccounts.delete(index);
+                item.classList.remove('selected');
+                checkbox.classList.remove('checked');
+                checkIcon.style.display = 'none';
+            } else {
+                selectedAccounts.add(index);
+                item.classList.add('selected');
+                checkbox.classList.add('checked');
+                checkIcon.style.display = 'block';
+            }
+
             updateSelectionUI();
         }
 
-        function toggleSelect(index) {
-            if (selectedAccounts.has(index)) {
-                selectedAccounts.delete(index);
-            } else {
-                selectedAccounts.add(index);
-            }
-            renderAccounts();
-        }
-
+        // 5. SELECT ALL
         function selectAll() {
             selectedAccounts.clear();
             emptyAccounts.forEach((_, index) => {
                 selectedAccounts.add(index);
+                const item = document.querySelector(`[data-index="${index}"]`);
+                const checkbox = item.querySelector('.checkbox-custom');
+                const checkIcon = checkbox.querySelector('i');
+                item.classList.add('selected');
+                checkbox.classList.add('checked');
+                checkIcon.style.display = 'block';
             });
-            renderAccounts();
+            updateSelectionUI();
         }
 
+        // 6. UPDATE SELECTION UI
         function updateSelectionUI() {
             const selectedBadge = document.getElementById('selected-badge');
             const burnBtn = document.getElementById('burn-btn');
@@ -334,6 +436,7 @@
             selectedBadge.innerText = `${selectedAccounts.size} Selected`;
             burnBtn.disabled = selectedAccounts.size === 0;
 
+            // Calculate total SOL
             let totalSol = 0;
             selectedAccounts.forEach(index => {
                 totalSol += emptyAccounts[index].rentExemptReserve / 1e9;
@@ -341,6 +444,7 @@
             refundAmount.innerText = totalSol.toFixed(4);
         }
 
+        // 7. BURN SELECTED
         async function burnSelected() {
             const burnBtn = document.getElementById('burn-btn');
             const status = document.getElementById('status-msg');
@@ -357,9 +461,10 @@
                 transaction.recentBlockhash = blockhash;
                 transaction.feePayer = userPublicKey;
 
+                // Add close instructions for selected accounts
                 selectedAccounts.forEach(index => {
                     const acc = emptyAccounts[index];
-                    transaction.add(new solanaWeb3.TransactionInstruction({
+                    const instruction = new solanaWeb3.TransactionInstruction({
                         keys: [
                             { pubkey: acc.pubkey, isSigner: false, isWritable: true },
                             { pubkey: userPublicKey, isSigner: false, isWritable: true },
@@ -367,23 +472,39 @@
                         ],
                         programId: TOKEN_PROGRAM_ID,
                         data: Uint8Array.of(9)
-                    }));
+                    });
+                    transaction.add(instruction);
                 });
 
-                // Provider seçimi
+                status.innerText = `Waiting for approval to burn ${selectedAccounts.size} accounts...`;
+
+                // Provider'ı al (Farcaster veya Browser)
                 let provider = null;
-                if (isInFrame && sdk && sdk.wallet) {
-                    provider = sdk.wallet.ethProvider; 
-                } else {
+                
+                if (window.farcasterSDK && window.farcasterSDK.wallet) {
+                    const fcWallet = window.farcasterSDK.wallet;
+                    provider = fcWallet.ethProvider?.solana || fcWallet.solana;
+                } 
+                
+                if (!provider) {
                     provider = window.solana;
                 }
 
-                status.innerText = `Waiting for approval...`;
+                if (!provider) {
+                    throw new Error("Wallet connection lost");
+                }
+                
+                console.log("📝 Signing transaction...");
+
+                // İşlemi imzala ve gönder
                 const { signature } = await provider.signAndSendTransaction(transaction);
                 
+                console.log("✅ Transaction sent:", signature);
+
                 status.innerHTML = `✅ Success! <a href="https://solscan.io/tx/${signature}" target="_blank" class="underline text-orange-400">View TX</a>`;
                 
-                // Temizlik
+                // Remove burned accounts
+                const burnedIndexes = Array.from(selectedAccounts);
                 emptyAccounts = emptyAccounts.filter((_, index) => !selectedAccounts.has(index));
                 selectedAccounts.clear();
 
@@ -399,9 +520,6 @@
                     renderAccounts();
                     updateSelectionUI();
                 }
-                
-                burnBtn.innerHTML = '<i class="fa-solid fa-fire"></i> BURN SELECTED ACCOUNTS';
-                burnBtn.disabled = false;
 
             } catch (err) {
                 console.error("Burn error:", err);
@@ -410,6 +528,23 @@
                 burnBtn.disabled = false;
             }
         }
+    </script>
+
+    <!-- Emergency Splash Screen Fixer -->
+    <script>
+        setTimeout(() => {
+            if (typeof sdk !== 'undefined' && sdk.actions && sdk.actions.ready) {
+                sdk.actions.ready();
+                console.log("🚨 EMERGENCY: Force-ready sent");
+            }
+            
+            try {
+                window.parent.postMessage({
+                    type: 'ready',
+                    data: { ready: true }
+                }, '*');
+            } catch(e) {}
+        }, 2000);
     </script>
 </body>
 </html>
