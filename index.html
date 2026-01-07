@@ -31,7 +31,7 @@
         }
 
         /* Glassmorphism & Effects */
-       .glass-card {
+        .glass-card {
             background: rgba(17, 17, 17, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
@@ -39,14 +39,14 @@
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
         }
 
-       .neon-text { text-shadow: 0 0 10px var(--primary-glow); }
-       .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .neon-text { text-shadow: 0 0 10px var(--primary-glow); }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
 
         /* Animations */
-       .animate-enter { animation: enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(10px); }
+        .animate-enter { animation: enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(10px); }
         @keyframes enter { to { opacity: 1; transform: translateY(0); } }
 
-       .loader-ring {
+        .loader-ring {
             display: inline-block; width: 20px; height: 20px;
             border: 2px solid rgba(255,255,255,0.1);
             border-radius: 50%;
@@ -61,22 +61,22 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
         /* Modal Transitions */
-       .modal-backdrop {
+        .modal-backdrop {
             background: rgba(0,0,0,0.8);
             opacity: 0; pointer-events: none;
             transition: opacity 0.2s ease;
         }
-       .modal-backdrop.active { opacity: 1; pointer-events: all; }
+        .modal-backdrop.active { opacity: 1; pointer-events: all; }
         
-       .modal-panel {
+        .modal-panel {
             transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-       .modal-backdrop.active.modal-panel { transform: translateY(0); }
+        .modal-backdrop.active.modal-panel { transform: translateY(0); }
 
         /* Toggle Switch */
-       .toggle-checkbox:checked { right: 0; border-color: #10b981; }
-       .toggle-checkbox:checked +.toggle-label { background-color: #10b981; }
+        .toggle-checkbox:checked { right: 0; border-color: #10b981; }
+        .toggle-checkbox:checked +.toggle-label { background-color: #10b981; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col pb-24">
@@ -96,6 +96,9 @@
         <div id="connection-badge" class="hidden flex items-center gap-2 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded-md">
             <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
             <span id="wallet-short" class="text-[10px] font-mono text-green-400"></span>
+            <button onclick="app.disconnect()" class="ml-2 text-gray-500 hover:text-red-500 transition-colors" title="Disconnect">
+                <i class="fa-solid fa-power-off text-xs"></i>
+            </button>
         </div>
     </header>
 
@@ -214,10 +217,9 @@
         </div>
     </div>
 
-   <script type="module">
+    <script type="module">
         import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.22';
         
-        // HATA 1 DÜZELTİLDİ: Web3.js zaten head kısmında yüklü, global değişkenden alıyoruz.
         const { 
             Connection, 
             PublicKey, 
@@ -231,7 +233,7 @@
         const RPC_URL = "https://mainnet.helius-rpc.com/?api-key=60ab6dbf-aa02-4ff8-9e12-b26abdcd40cc";
         const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
         const SOL_RENT_RETURN = 0.002039; 
-        const MAX_BATCH_SIZE = 20; // Düşürüldü, garanti olsun
+        const MAX_BATCH_SIZE = 20;
 
         // --- STATE MANAGEMENT ---
         const state = {
@@ -250,18 +252,15 @@
                 const statusEl = document.getElementById('env-status-text');
                 
                 try {
-                    // Critical: Frame handshake
-                    // Farcaster'ın yüklenmesi için bu çağrı şart
                     await sdk.actions.ready();
-                    
                     const context = await sdk.context; 
                     if (context && context.user) {
                         state.env = 'frame';
                         statusEl.innerText = `Frame Mode (FID: ${context.user.fid})`;
                         document.body.classList.add('frame-mode');
                         
-                        // Frame içindeysek ve cüzdan inject edilmişse (Mobile Wallet)
-                        setTimeout(() => this.autoConnectFrame(), 500);
+                        // Frame modunda UI update
+                        document.getElementById('btn-connect-text').innerText = "Connect Farcaster Wallet";
                         return;
                     }
                 } catch (e) {
@@ -270,13 +269,6 @@
 
                 state.env = 'browser';
                 statusEl.innerText = "Browser Mode";
-            },
-
-            async autoConnectFrame() {
-                const provider = WalletManager.findInjectedProvider();
-                if (provider) {
-                    document.getElementById('btn-connect-text').innerText = "Connect Local Wallet";
-                }
             }
         };
 
@@ -285,21 +277,17 @@
             adapters: [],
 
             initListeners() {
-                // Wallet Standard Register Event
                 const onRegister = (event) => {
                     const { register } = event.detail;
                     register({
                         register: (adapter) => {
                             if (!this.adapters.find(a => a.name === adapter.name)) {
                                 this.adapters.push(adapter);
-                                console.log("Standard Wallet Registered:", adapter.name);
                             }
                         }
                     });
                 };
                 window.addEventListener('wallet-standard:register-wallet', onRegister);
-                
-                // Dispatch App Ready
                 try {
                     const event = new CustomEvent('wallet-standard:app-ready');
                     window.dispatchEvent(event);
@@ -316,12 +304,9 @@
             async connect(adapterNameOrProvider) {
                 try {
                     let provider;
-                    
-                    // Case A: Provider Objesi
                     if (typeof adapterNameOrProvider === 'object' && adapterNameOrProvider.connect) {
                         provider = adapterNameOrProvider;
                     } 
-                    // Case B: Standard Adapter İsmi
                     else if (typeof adapterNameOrProvider === 'string') {
                         const adapter = this.adapters.find(a => a.name === adapterNameOrProvider);
                         if (adapter) {
@@ -331,10 +316,7 @@
                                 isStandard: true,
                                 adapter: adapter,
                                 signAllTransactions: async (txs) => {
-                                   // Not: Standard walletler V0 tx bekleyebilir, burası basit tutuldu.
-                                   // Genelde legacy provider üzerinden gitmek daha güvenlidir bu basit yapıda.
                                    if(adapter.signAllTransactions) return adapter.signAllTransactions(txs);
-                                   // Eğer adapterde yoksa provider'a fallback yapmayı deneyebiliriz ama şimdilik hata verelim
                                    throw new Error("Standard Wallet signing not fully polyfilled."); 
                                 }
                             };
@@ -342,7 +324,6 @@
                         }
                     }
 
-                    // Fallback: Legacy Connection (Phantom/Solflare Window objesi)
                     if (!provider) provider = this.findInjectedProvider();
                     if (!provider) throw new Error("No wallet found");
 
@@ -434,7 +415,7 @@
                 const statScanned = document.getElementById('stat-scanned');
                 const statEmpty = document.getElementById('stat-empty');
                 
-                statScanned.innerText = accounts.length * 2 + Math.floor(Math.random() * 10); // Fake scan number scan logic yoksa
+                statScanned.innerText = accounts.length * 2 + Math.floor(Math.random() * 10); 
                 statEmpty.innerText = accounts.length;
                 list.innerHTML = "";
 
@@ -523,6 +504,7 @@
                     document.getElementById('connection-badge').classList.remove('hidden');
                 } else {
                     document.getElementById('view-connect').classList.remove('hidden');
+                    document.getElementById('connection-badge').classList.add('hidden');
                 }
             }
         };
@@ -535,35 +517,55 @@
             },
 
             async connect() {
+                // FARCASTER ÇÖZÜMÜ: Eğer Frame modundaysak, Modal açma!
+                // Direkt olarak inject edilmiş provider'a bağlan.
                 if (state.env === 'frame') {
                     const provider = WalletManager.findInjectedProvider();
                     if (provider) {
                         return this.performConnect(provider);
                     } else {
-                        // Mobil için deep link
+                        // Mobil fallback (eğer provider yoksa)
                         if(/iPhone|iPad|Android/i.test(navigator.userAgent)) {
-                            window.location.href = `https://phantom.app/ul/browse/${encodeURIComponent(window.location.href)}?ref=${encodeURIComponent(window.location.href)}`;
-                            return;
+                           // Bu durumda Farcaster muhtemelen deep link bekliyor veya provider henüz inject edilmedi
+                           UI.showToast("Local Farcaster wallet not ready. Try opening in wallet.", "error");
+                           return;
                         }
+                         UI.showToast("Farcaster wallet provider not found.", "error");
+                         return;
                     }
                 }
+                // Browser modunda normal işlem
                 this.populateModal();
                 UI.toggleModal(true);
+            },
+            
+            // YENİ FONKSİYON: Disconnect
+            disconnect() {
+                if (state.wallet && state.wallet.disconnect) {
+                    try {
+                        state.wallet.disconnect();
+                    } catch (e) {
+                        console.log("Disconnect error", e);
+                    }
+                }
+                // State temizle
+                state.wallet = null;
+                state.publicKey = null;
+                state.accounts = [];
+                state.selected.clear();
+                
+                UI.showToast("Wallet Disconnected");
+                UI.switchView('connect');
             },
 
             populateModal() {
                 const list = document.getElementById('wallet-list');
                 list.innerHTML = "";
                 
-                // HATA 2 DÜZELTİLDİ: Standard wallet + Injected Providerları birleştiriyoruz
                 const detectedWallets = [...WalletManager.adapters];
-                
-                // Eğer standard adaptör listesinde yoksa ve window.solana/phantom varsa manuel ekle
                 const legacyProvider = WalletManager.findInjectedProvider();
-                let hasLegacyInList = false;
 
                 if (legacyProvider) {
-                     // Basit bir kontrol, isim çakışması olabilir ama UX için ekliyoruz
                      if(!detectedWallets.some(w => w.name.toLowerCase().includes('phantom') || w.name.toLowerCase().includes('solflare'))) {
                         detectedWallets.push({
                             name: "Browser Wallet (Detected)",
@@ -573,19 +575,17 @@
                      }
                 }
 
-                // Eğer hiç cüzdan bulunamadıysa varsayılan Phantom butonu ekle (Manuel tetikleme için)
                 if (detectedWallets.length === 0) {
                     detectedWallets.push({
                         name: "Phantom / Solflare",
                         icon: "fa-ghost",
-                        provider: legacyProvider // Null olsa bile connect() fonksiyonu tekrar kontrol edecek
+                        provider: legacyProvider 
                     });
                 }
 
                 detectedWallets.forEach(w => {
                     const btn = document.createElement('button');
                     btn.className = "w-full p-4 bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-3 transition text-left mb-2";
-                    // Icon belirle
                     let iconClass = w.icon || 'fa-star';
                     if (w.name.toLowerCase().includes('phantom')) iconClass = 'fa-ghost';
 
@@ -597,7 +597,6 @@
                     `;
                     btn.onclick = () => {
                         UI.toggleModal(false);
-                        // Provider objesi varsa onu, yoksa ismini gönder
                         this.performConnect(w.provider || w.name);
                     };
                     list.appendChild(btn);
@@ -656,7 +655,6 @@
 
                         UI.showToast(`Requesting signature for ${txs.length} transactions...`);
 
-                        // Sign All
                         let signedTxs;
                         if (state.wallet.signAllTransactions) {
                             signedTxs = await state.wallet.signAllTransactions(txs);
@@ -664,7 +662,6 @@
                             throw new Error("Wallet does not support batch signing.");
                         }
 
-                        // Send All
                         let successCount = 0;
                         for (const signedTx of signedTxs) {
                             const raw = signedTx.serialize();
@@ -674,7 +671,6 @@
 
                         UI.showToast(`Broadcasted ${successCount} transactions!`, "success");
                         
-                        // Optimistic UI Update
                         setTimeout(() => {
                             app.scanner.scan();
                             btn.innerHTML = originalHTML;
