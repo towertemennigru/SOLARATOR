@@ -246,69 +246,150 @@
             isBurning: false
         };
 
-        // --- 1. ENVIRONMENT & SDK INIT ---
-        const EnvManager = {
-            async init() {
-                const statusEl = document.getElementById('env-status-text');
+       const EnvManager = {
+    async init() {
+        const statusEl = document.getElementById('env-status-text');
+        
+        try {
+            await sdk.actions.ready();
+            const context = await sdk.context; 
+            
+            if (context && context.user) {
+                state.env = 'frame';
+                statusEl.innerText = `Frame Mode (FID: ${context.user.fid})`;
+                document.body.classList.add('frame-mode');
                 
-                try {
-                    await sdk.actions.ready();
-                    const context = await sdk.context; 
-                    // ... EnvManager.init() içinde context check bloğu ...
-if (context && context.user) {
-    state.env = 'frame';
-    statusEl.innerText = `Frame Mode (FID: ${context.user.fid})`;
-    document.body.classList.add('frame-mode');
-    
-    // BUTON YAZISINI DEĞİŞTİR
-    document.getElementById('btn-connect-text').innerText = "Auth & Connect"; 
-    
-    // Otomatik deneme (İsteğe bağlı, sayfa açılır açılmaz bağlanmayı dener)
-    // setTimeout(() => app.connect(), 1000); 
-    return;
-}
-                } catch (e) {
-                    console.log("Not in Frame context:", e);
-                }
-
-                state.env = 'browser';
-                statusEl.innerText = "Browser Mode";
+                // Farcaster Wallet'ı bulmak için özel bir yaklaşım
+                setTimeout(() => {
+                    this.detectFarcasterWallet();
+                }, 1000);
+                
+                return;
             }
-        };
+        } catch (e) {
+            console.log("Not in Frame context:", e);
+        }
+
+        state.env = 'browser';
+        statusEl.innerText = "Browser Mode";
+    },
+    
+    async detectFarcasterWallet() {
+        // 1. Standart wallet'ları kontrol et
+        if (WalletManager.adapters.length > 0) {
+            console.log("Found adapters:", WalletManager.adapters.map(a => a.name));
+            return;
+        }
+        
+        // 2. Farcaster'ın özel provider'ını kontrol et
+        if (window.farcasterWallet || window.farcaster?.solana) {
+            console.log("Found Farcaster wallet via window object");
+            return;
+        }
+        
+        // 3. Frame SDK'nın kendi provider'ını kontrol et
+        try {
+            if (sdk.wallet) {
+                console.log("Found wallet via Frame SDK");
+                return;
+            }
+        } catch (e) {}
+        
+        console.warn("No wallet found in Frame mode");
+    }
+};
 
         // --- 2. WALLET MANAGER (Güncellendi) ---
 const WalletManager = {
     adapters: [],
+    farcasterProvider: null,
 
     initListeners() {
         const onRegister = (event) => {
             const { register } = event.detail;
             register({
                 register: (adapter) => {
-                    // Frame modundaysak ve gelen cüzdan Phantom/Solflare ise kaydetme (Yoksay)
-                    if (state.env === 'frame' && (adapter.name.toLowerCase().includes('phantom') || adapter.name.toLowerCase().includes('solflare'))) {
-                        return;
-                    }
+                    console.log("Wallet registering:", adapter.name);
                     
+                    // Frame modunda TÜM cüzdanları kabul et (filtrelemeyi kaldır)
+                    // Farcaster Wallet genellikle "Farcaster Wallet" olarak gelir
                     if (!this.adapters.find(a => a.name === adapter.name)) {
                         this.adapters.push(adapter);
-                        console.log("Wallet Registered:", adapter.name);
+                        console.log("✅ Wallet Registered:", adapter.name);
+                        
+                        // Frame modunda ve Farcaster Wallet bulunursa
+                        if (state.env === 'frame' && adapter.name.includes('Farcaster')) {
+                            console.log("🎯 Farcaster Wallet detected!");
+                            // Otomatik bağlanmayı deneyebiliriz
+                            // setTimeout(() => app.performConnect(adapter.name), 500);
+                        }
                     }
                 }
             });
         };
+        
         window.addEventListener('wallet-standard:register-wallet', onRegister);
+        
+        // Farcaster'ın özel provider'ını da dinle
+        this.setupFarcasterListener();
+        
         try {
             const event = new CustomEvent('wallet-standard:app-ready');
             window.dispatchEvent(event);
         } catch(e) {}
     },
+    
+    setupFarcasterListener() {
+        // Farcaster'ın kendi wallet provider'ını dinle
+        if (state.env === 'frame') {
+            const interval = setInterval(() => {
+                // 1. window.solana'yı kontrol et
+                if (window.solana && window.solana.connect && !this.farcasterProvider) {
+                    console.log("Found window.solana in Frame");
+                    this.farcasterProvider = window.solana;
+                    clearInterval(interval);
+                }
+                
+                // 2. Farcaster'ın özel nesnesini kontrol et
+                if (window.farcasterWallet && !this.farcasterProvider) {
+                    console.log("Found Farcaster Wallet via window.farcasterWallet");
+                    this.farcasterProvider = window.farcasterWallet;
+                    clearInterval(interval);
+                }
+                
+                // 3. Frame SDK'nın wallet'ını kontrol et
+                if (sdk.wallet && !this.farcasterProvider) {
+                    console.log("Found wallet via Frame SDK wallet property");
+                    this.farcasterProvider = sdk.wallet;
+                    clearInterval(interval);
+                }
+            }, 500);
+            
+            // 10 saniye sonra timeout
+            setTimeout(() => clearInterval(interval), 10000);
+        }
+    },
 
-    // Frame modunda bu fonksiyonu devre dışı bırakacağız veya özel bir kontrol ekleyeceğiz
     findInjectedProvider() {
-        // Eğer Frame modundaysak, global window.phantom vs. objelerine bakma!
-        if (state.env === 'frame') return null;
+        // Frame modunda tüm olasılıkları kontrol et
+        if (state.env === 'frame') {
+            if (this.farcasterProvider) return this.farcasterProvider;
+            if (window.farcasterWallet) return window.farcasterWallet;
+            if (window.farcaster?.solana) return window.farcaster.solana;
+            if (sdk.wallet) return sdk.wallet;
+            
+            // Farcaster'ın window.solana'ya inject ettiğini kontrol et
+            if (window.solana && window.solana.connect) {
+                // Phantom/Solflare değilse (Frame'de olmaz ama kontrol edelim)
+                if (!window.solana.isPhantom && !window.solana.isSolflare) {
+                    return window.solana;
+                }
+            }
+            
+            return null;
+        }
 
+        // Browser modu için normal kontrol
         if ('phantom' in window && window.phantom.solana) return window.phantom.solana;
         if ('solflare' in window) return window.solflare;
         if ('solana' in window) return window.solana;
@@ -316,13 +397,18 @@ const WalletManager = {
     },
 
     async connect(adapterNameOrProvider) {
-        // ... (Bu kısım aynı kalabilir, aşağıda app.connect içinde ana mantığı değiştireceğiz)
         try {
-            let provider;
-            if (typeof adapterNameOrProvider === 'object' && adapterNameOrProvider.connect) {
-                provider = adapterNameOrProvider;
-            } 
-            else if (typeof adapterNameOrProvider === 'string') {
+            // Frame modunda ve doğrudan provider verilmişse
+            if (state.env === 'frame' && typeof adapterNameOrProvider === 'object') {
+                const provider = adapterNameOrProvider;
+                const resp = await provider.connect();
+                state.publicKey = resp.publicKey;
+                state.wallet = provider;
+                return state.publicKey;
+            }
+            
+            // Standart wallet adaptörü ile
+            if (typeof adapterNameOrProvider === 'string') {
                 const adapter = this.adapters.find(a => a.name === adapterNameOrProvider);
                 if (adapter) {
                     await adapter.features['standard:connect'].connect();
@@ -331,21 +417,26 @@ const WalletManager = {
                         isStandard: true,
                         adapter: adapter,
                         signAllTransactions: async (txs) => {
-                           if(adapter.signAllTransactions) return adapter.signAllTransactions(txs);
-                           throw new Error("Standard Wallet signing not fully polyfilled."); 
+                            // Farcaster Wallet için özel işleme
+                            if (adapter.name.includes('Farcaster')) {
+                                return await Promise.all(txs.map(tx => adapter.signTransaction(tx)));
+                            }
+                            return adapter.signAllTransactions(txs);
                         }
                     };
                     return state.publicKey;
                 }
             }
 
-            // Fallback for browser mode
-            if (!provider) provider = this.findInjectedProvider();
-            if (!provider) throw new Error("No wallet found");
+            // Fallback: injected provider
+            const provider = this.findInjectedProvider();
+            if (!provider) {
+                throw new Error("No wallet found. Make sure you're using a Farcaster client with Solana support.");
+            }
 
             const resp = await provider.connect();
             state.publicKey = resp.publicKey;
-            state.wallet = provider; 
+            state.wallet = provider;
             return state.publicKey;
 
         } catch (e) {
@@ -533,34 +624,50 @@ const WalletManager = {
             },
 
             async connect() {
-        // --- SENARYO 1: FRAME MODU ---
-        if (state.env === 'frame') {
-            UI.showToast("Connecting to Farcaster Wallet...", "info");
-
-            // Frame içinde cüzdanlar 'standard' protokolü ile gelir.
-            // Biraz bekleyip adaptörlerin yüklenmesine izin verelim (race condition önlemek için)
-            if (WalletManager.adapters.length === 0) {
-                // Adaptörlerin register olması için kısa bir bekleme
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-
-            // Filtrelemeyi yukarıda yaptık, buradaki listede kalan ilk cüzdan Farcaster olmalı.
-            const farcasterWallet = WalletManager.adapters[0];
-
-            if (farcasterWallet) {
-                return this.performConnect(farcasterWallet.name);
-            } else {
-                // Eğer Standard Wallet bulunamadıysa, belki Farcaster window.solana'ya inject etmiştir (nadiren)
-                // Ama yukarıda findInjectedProvider'ı kapattık, bu yüzden hata dönüyoruz.
-                UI.showToast("Farcaster Wallet not detected. Please try again.", "error");
-                return;
-            }
+    // --- SENARYO 1: FRAME MODU ---
+    if (state.env === 'frame') {
+        UI.showToast("Looking for Farcaster Wallet...", "info");
+        
+        // 1. Önce Standart Wallet adaptörlerini kontrol et
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Biraz bekle
+        
+        if (WalletManager.adapters.length > 0) {
+            // Frame'de genellikle sadece bir wallet olur (Farcaster Wallet)
+            const frameWallet = WalletManager.adapters[0];
+            console.log("Using frame wallet:", frameWallet?.name);
+            return this.performConnect(frameWallet?.name || "Farcaster Wallet");
         }
+        
+        // 2. Injected provider'ı kontrol et
+        const injected = WalletManager.findInjectedProvider();
+        if (injected) {
+            console.log("Using injected provider:", injected);
+            return this.performConnect(injected);
+        }
+        
+        // 3. Frame SDK üzerinden wallet'ı kontrol et
+        try {
+            if (sdk.wallet) {
+                console.log("Using SDK wallet");
+                return this.performConnect(sdk.wallet);
+            }
+        } catch (e) {}
+        
+        // 4. Hiçbiri yoksa kullanıcıya yardımcı mesaj göster
+        UI.showToast(
+            "Farcaster Wallet not found. Try:\n" +
+            "1. Refresh the frame\n" +
+            "2. Update your Farcaster client\n" +
+            "3. Use Warpcast with Solana support", 
+            "error"
+        );
+        return;
+    }
 
-        // --- SENARYO 2: BROWSER MODU ---
-        this.populateModal();
-        UI.toggleModal(true);
-    },
+    // --- SENARYO 2: BROWSER MODU ---
+    this.populateModal();
+    UI.toggleModal(true);
+},
             
             // YENİ FONKSİYON: Disconnect
             disconnect() {
@@ -714,6 +821,29 @@ const WalletManager = {
 
         document.addEventListener('DOMContentLoaded', () => window.app.init());
 
+        // Debug için global erişim
+window.debugApp = {
+    getState: () => state,
+    getWalletManager: () => WalletManager,
+    getAdapters: () => WalletManager.adapters,
+    checkFarcaster: () => {
+        console.log("Checking Farcaster environment...");
+        console.log("window.solana:", window.solana);
+        console.log("window.farcasterWallet:", window.farcasterWallet);
+        console.log("window.farcaster:", window.farcaster);
+        console.log("sdk.wallet:", sdk.wallet);
+        console.log("Adapters:", WalletManager.adapters);
+        console.log("State env:", state.env);
+    },
+    forceConnect: async () => {
+        const provider = WalletManager.findInjectedProvider();
+        if (provider) {
+            return app.performConnect(provider);
+        }
+        return null;
+    }
+};
+    
     </script>
 </body>
 </html>
